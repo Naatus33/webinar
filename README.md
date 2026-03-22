@@ -1,3 +1,21 @@
+## Webinar Manager — papéis
+
+- **Admin:** vê todos os webinars; em **Equipe** (`/dashboard/equipe`) vincula cada **vendedor** a um **gestor**.
+- **Gestor:** vê e opera webinars próprios e da equipe (builder, live, analytics).
+- **Vendedor:** apenas os próprios webinars.
+
+**Contagem até o início:** usa data/hora no fuso local. Com status **LIVE**, a página pública mostra ao vivo mesmo antes do horário agendado.
+
+---
+
+### Hard-prod (Postgres e chat em tempo real)
+
+- **Chat em tempo real:** o modo `config.chat.mode === "live"` usa SSE no endpoint [`/api/webinars/[id]/chat/stream`](src/app/api/webinars/[id]/chat/stream/route.ts) e atualiza o painel do host e a sala do espectador com snapshots periódicos (inclui mensagens, `pinned` e `timestamp`).
+- **Postgres:** `prisma/schema.prisma` usa `provider = "postgresql"`. No `.env`, defina `DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB?schema=public`.
+  - Migrações: `npx prisma migrate dev` (dev) ou `npx prisma migrate deploy` (produção), depois `npx prisma generate`.
+  - **Prisma 7:** em [`src/lib/prisma.ts`](src/lib/prisma.ts), Postgres usa o adapter `@prisma/adapter-pg` + `pg`; se `DATABASE_URL` começar com `file:` (SQLite), usa `better-sqlite3`.
+  - **Usuários demo:** após migrar, rode `npm run db:seed` — `admin@demo.local`, `gestor@demo.local`, `vendedor@demo.local` (senha `demo1234`).
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

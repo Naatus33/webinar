@@ -2,14 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useCallback } from "react";
-import useSWR from "swr";
 import { MessageCircle, X, Users, AlertTriangle, ChevronUp, Pin, Maximize2, Minimize2, Heart, Timer } from "lucide-react";
 import type { WebinarConfig } from "@/lib/webinar-templates";
+import { computePublicWatchPhase } from "@/lib/webinar-timing";
+import { useChatSse } from "@/lib/useChatSse";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface ChatMessage {
   id: string;
@@ -62,41 +61,40 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
   const [hearts, setHearts] = useState<{id: number, left: number}[]>([]);
   const heartCounter = useRef(0);
 
-  const updatePhase = useCallback(() => {
-    const now = new Date();
-    // Reconstruímos a startDateTime dentro da useCallback, garantindo o encapsulamento
-    if (!webinar.startDate || !webinar.startTime) {
-        return;
-    }
-    const [hoursStr, minutesStr] = webinar.startTime.split(":");
-    const startDateTime = new Date(webinar.startDate);
-    startDateTime.setHours(parseInt(hoursStr ?? "0", 10), parseInt(minutesStr ?? "0", 10), 0, 0);
-
-    const diff = startDateTime.getTime() - now.getTime();
-    if (diff <= 0) {
-      setPhase(webinar.replayEnabled ? "replay" : "live");
+  const tickPhase = useCallback(() => {
+    const { phase: p, secondsUntilStart, secondsSinceStart } = computePublicWatchPhase({
+      startDate: webinar.startDate,
+      startTime: webinar.startTime,
+      replayEnabled: webinar.replayEnabled,
+      status: webinar.status,
+    });
+    setPhase(p);
+    if (secondsUntilStart != null && secondsUntilStart > 0) {
+      const h = Math.floor(secondsUntilStart / 3600);
+      const m = Math.floor((secondsUntilStart % 3600) / 60);
+      const s = secondsUntilStart % 60;
+      setCountdown({ hours: h, minutes: m, seconds: s });
+    } else {
       setCountdown(null);
-      return;
     }
-    setPhase("waiting");
-    const totalSeconds = Math.floor(diff / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    setCountdown({ hours, minutes, seconds });
-  }, [webinar.startDate, webinar.startTime, webinar.replayEnabled]);
 
-  // Calcula fase (waiting/live/replay) com base em startDate/startTime
+    // Mantém o tempo de playback usado por: chat em replay, presença e outras timers.
+    if (p === "live" || p === "replay") {
+      setPlayerSeconds((prev) => {
+        if (secondsSinceStart <= 0) return prev;
+        // Evita "regressão" caso o servidor/client difira um pouco.
+        return prev < secondsSinceStart ? secondsSinceStart : prev;
+      });
+    } else {
+      setPlayerSeconds(0);
+    }
+  }, [webinar.startDate, webinar.startTime, webinar.replayEnabled, webinar.status]);
+
   useEffect(() => {
-    if (!webinar.startDate || !webinar.startTime) {
-      setPhase(webinar.replayEnabled ? "replay" : "live");
-      return;
-    }
-
-    updatePhase();
-    const interval = setInterval(updatePhase, 1000);
+    tickPhase();
+    const interval = setInterval(tickPhase, 1000);
     return () => clearInterval(interval);
-  }, [webinar.startDate, webinar.startTime, webinar.replayEnabled, updatePhase]);
+  }, [tickPhase]);
 
   useEffect(() => {
     const initial = Math.floor(Math.random() * (config.participants.max - config.participants.min + 1)) + config.participants.min;
@@ -107,16 +105,14 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const phaseElapsed = useRef(0);
 
-  // Polling de chat
-  const { data: chatMessages = [], mutate: refetchChat } = useSWR<ChatMessage[]>(
-    config.chat.enabled ? `/api/webinars/${webinar.id}/chat` : null,
-    fetcher,
-    { refreshInterval: config.chat.mode === "live" ? 2500 : 0, revalidateOnFocus: false, dedupingInterval: 2000 }
-  );
+  const { messages: chatMessages } = useChatSse(webinar.id, config.chat.enabled);
 
-  const visibleMessages = config.chat.mode === "replay"
-    ? chatMessages.filter((m) => m.timestamp !== null && m.timestamp <= playerSeconds)
-    : chatMessages;
+  const visibleMessages =
+    config.chat.mode === "replay"
+      ? chatMessages.filter(
+          (m) => m.timestamp !== null && m.timestamp <= playerSeconds,
+        )
+      : chatMessages;
 
   const pinnedMessage = visibleMessages.find((m) => m.pinned);
 
@@ -200,10 +196,15 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
     await fetch(`/api/webinars/${webinar.id}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ author: name, content: chatInput.trim() }),
+      body: JSON.stringify({
+        author: name,
+        content: chatInput.trim(),
+        // No modo replay, o timestamp é usado para renderizar a mensagem no "tempo" certo.
+        timestamp:
+          config.chat.mode === "replay" ? playerSeconds : undefined,
+      }),
     });
     setChatInput("");
-    refetchChat();
   }
 
   const handleHeartClick = () => {
@@ -275,7 +276,11 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
       <div className={`flex flex-1 overflow-hidden relative ${focusMode ? 'p-0' : 'p-0 md:p-4 gap-4'}`}>
         
         {/* Container Central (Player + Content) */}
-        <div className={`flex flex-1 flex-col transition-all duration-500 ${focusMode ? 'w-full max-w-none' : 'max-w-5xl mx-auto w-full'}`}>
+        <div
+          className={`flex flex-1 flex-col transition-all duration-500 ${
+            focusMode ? "w-full max-w-none" : "w-full min-w-0"
+          }`}
+        >
           
           {/* Player Wrapper */}
           <div className={`relative w-full bg-black flex-shrink-0 group ${focusMode ? 'h-full' : 'rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10'}`}>
@@ -392,7 +397,7 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
 
         {/* Desktop Chat Sidebar - Hides in Focus Mode */}
         {config.chat.enabled && !focusMode && (
-          <div className="hidden md:flex flex-col w-[340px] flex-shrink-0 h-full">
+          <div className="hidden md:flex flex-col w-[340px] flex-shrink-0 h-full min-h-0 overflow-hidden">
             <ChatBox
               messages={visibleMessages}
               pinnedMessage={pinnedMessage}

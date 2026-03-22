@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>Webinar Ao Vivo · Sala principal</title>
+    <!-- Fonte Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* PALETA DE CORES - TEMA DARK COM VERMELHO */
+        :root {
+            --vermelho: #E63946;      /* vermelho vibrante para destaques */
+            --branco: #FFFFFF;         /* textos e ícones */
+            --cinza-claro: #2C2C2C;    /* fundo de seções alternadas, bordas */
+            --verde: #27AE60;           /* indicadores positivos */
+            --preto: #121212;           /* fundo principal */
+            --preto-elevado: #1E1E1E;   /* cards e áreas elevadas */
+            --borda: #3A3A3A;           /* bordas suaves */
+            --texto-secundario: #B0B0B0;
+        }
+
+        body {
+            background-color: var(--preto);
+            color: var(--branco);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .webinar-room {
+            max-width: 1600px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 24px;
+            background-color: transparent;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* ÁREA DO VÍDEO */
+        .video-section {
+            background-color: var(--preto-elevado);
+            border: 1px solid var(--borda);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .video-player {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background-color: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid var(--borda);
+        }
+
+        .video-placeholder {
+            text-align: center;
+            color: var(--texto-secundario);
+        }
+
+        .video-placeholder i {
+            font-size: 5rem;
+            color: var(--vermelho);
+            margin-bottom: 16px;
+            opacity: 0.9;
+        }
+
+        .video-placeholder p {
+            font-size: 1.2rem;
+            font-weight: 500;
+            background-color: rgba(0,0,0,0.7);
+            padding: 8px 24px;
+            border: 1px solid var(--vermelho);
+            display: inline-block;
+            color: var(--branco);
+        }
+
+        /* MENSAGEM DE BOAS-VINDAS + ESCASSEZ NO CANTO DO VÍDEO */
+        .welcome-tag {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: var(--preto-elevado);
+            border: 2px solid var(--vermelho);
+            padding: 12px 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            animation: slideInLeft 0.5s ease-out;
+            max-width: 300px;
+        }
+
+        @keyframes slideInLeft {
+            0% { transform: translateX(-30px); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        .welcome-tag .main-message {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--vermelho);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .welcome-tag .event-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--branco);
+            margin: 6px 0 8px;
+        }
+
+        .welcome-tag .scarcity {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: var(--branco);
+            border-top: 1px dashed var(--vermelho);
+            padding-top: 8px;
+            margin-top: 4px;
+        }
+
+        .scarcity i {
+            color: var(--vermelho);
+            font-size: 1rem;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.7; transform: scale(1); }
+        }
+
+        .scarcity span {
+            font-weight: 600;
+        }
+
+        /* Informações abaixo do vídeo */
+        .video-info-bar {
+            padding: 16px 24px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            background-color: var(--preto-elevado);
+        }
+
+        .video-title h2 {
+            font-weight: 600;
+            font-size: 1.4rem;
+            color: var(--branco);
+        }
+
+        .video-title p {
+            font-size: 0.9rem;
+            color: var(--texto-secundario);
+            margin-top: 4px;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .live-badge {
+            background-color: var(--vermelho);
+            color: var(--branco);
+            font-weight: 700;
+            padding: 6px 16px;
+            border: 1px solid var(--vermelho);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .viewers-count {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--texto-secundario);
+        }
+
+        .viewers-count i {
+            color: var(--verde);
+        }
+
+        /* ÁREA DO CHAT */
+        .chat-section {
+            background-color: var(--preto-elevado);
+            border: 1px solid var(--borda);
+            display: flex;
+            flex-direction: column;
+            height: fit-content;
+            min-height: 600px;
+        }
+
+        /* CTA ACIMA DO CHAT */
+        .cta-container {
+            padding: 20px 20px 12px 20px;
+            border-bottom: 2px solid var(--vermelho);
+            background-color: var(--preto-elevado);
+        }
+
+        .cta-button {
+            background-color: var(--vermelho);
+            border: 2px solid var(--vermelho);
+            padding: 16px 0;
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            color: var(--branco);
+            letter-spacing: 1px;
+            cursor: default;
+            transition: all 0.2s;
+            box-shadow: 0 6px 14px rgba(230, 57, 70, 0.3);
+            width: 100%;
+        }
+
+        .cta-button:hover {
+            background-color: transparent;
+            color: var(--vermelho);
+            border-color: var(--vermelho);
+            transform: scale(1.01);
+        }
+
+        .cta-button i {
+            margin-right: 10px;
+            color: var(--branco);
+            transition: color 0.2s;
+        }
+
+        .cta-button:hover i {
+            color: var(--vermelho);
+        }
+
+        .cta-sub {
+            text-align: right;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: var(--verde);
+            font-weight: 600;
+        }
+
+        /* MENSAGENS DO CHAT */
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 380px;
+            background-color: var(--cinza-claro);
+            border-bottom: 1px solid var(--borda);
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: messageAppear 0.3s ease-out;
+            background-color: var(--preto-elevado);
+            padding: 12px;
+            border: 1px solid var(--borda);
+        }
+
+        @keyframes messageAppear {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: var(--vermelho);
+            border: 1px solid var(--vermelho);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--branco);
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .msg-content {
+            flex: 1;
+        }
+
+        .msg-user {
+            font-weight: 700;
+            color: var(--branco);
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+        .msg-text {
+            color: var(--texto-secundario);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .msg-time {
+            font-size: 0.65rem;
+            color: #777;
+            margin-top: 4px;
+        }
+
+        /* CAMPO DE ENVIAR MENSAGEM */
+        .chat-input-area {
+            padding: 20px;
+            display: flex;
+            gap: 12px;
+            background-color: var(--preto-elevado);
+            border-top: 1px solid var(--borda);
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            background-color: var(--cinza-claro);
+            border: 1px solid var(--borda);
+            padding: 14px 16px;
+            color: var(--branco);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input-area input:focus {
+            border-color: var(--vermelho);
+        }
+
+        .chat-input-area button {
+            background-color: var(--vermelho);
+            border: 1px solid var(--vermelho);
+            color: var(--branco);
+            padding: 0 24px;
+            font-weight: 600;
+            cursor: default;
+            transition: 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .chat-input-area button:hover {
+            background-color: transparent;
+            color: var(--vermelho);
+        }
+
+        /* RESPONSIVIDADE */
+        @media screen and (max-width: 1000px) {
+            .webinar-room {
+                grid-template-columns: 1fr;
+            }
+            .chat-section {
+                min-height: auto;
+            }
+            .welcome-tag {
+                max-width: 250px;
+                padding: 10px 18px;
+            }
+        }
+
+        @media screen and (max-width: 550px) {
+            .welcome-tag .main-message {
+                font-size: 1rem;
+            }
+            .video-info-bar {
+                flex-direction: column;
+                align-items: start;
+            }
+            .cta-button {
+                font-size: 1rem;
+                padding: 12px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="webinar-room">
+        <!-- COLUNA DA ESQUERDA: VÍDEO -->
+        <div class="video-section">
+            <div class="video-player">
+                <!-- Placeholder do vídeo (simulação) -->
+                <div class="video-placeholder">
+                    <i class="fas fa-play-circle"></i>
+                    <p>Transmissão ao vivo</p>
+                </div>
+
+                <!-- MENSAGEM DE BOAS-VINDAS COM ESCASSEZ (canto superior esquerdo) -->
+                <div class="welcome-tag">
+                    <span class="main-message">🔴 SEJA BEM-VINDO AO</span>
+                    <span class="event-name">Webinar Vendas 4.0</span>
+                    <div class="scarcity">
+                        <i class="fas fa-fire"></i>
+                        <span>últimas 38 vagas</span>
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INFOS ABAIXO DO VÍDEO -->
+            <div class="video-info-bar">
+                <div class="video-title">
+                    <h2>Vendas 4.0: Estratégias que convertem</h2>
+                    <p><i class="fas fa-user-tie" style="color: var(--vermelho);"></i> Palestrante: Carolina Freitas</p>
+                </div>
+                <div class="live-indicator">
+                    <span class="live-badge"><i class="fas fa-circle" style="font-size: 0.6rem; margin-right: 5px;"></i> AO VIVO</span>
+                    <span class="viewers-count"><i class="fas fa-eye"></i> 312 assistindo</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUNA DA DIREITA: CHAT + CTA -->
+        <div class="chat-section">
+            <!-- CTA em destaque acima do chat -->
+            <div class="cta-container">
+                <div class="cta-button">
+                    <i class="fas fa-download"></i> MATERIAL EXCLUSIVO
+                </div>
+                <div class="cta-sub">disponível por tempo limitado</div>
+            </div>
+
+            <!-- MENSAGENS DO CHAT -->
+            <div class="chat-messages">
+                <div class="message">
+                    <div class="avatar">AL</div>
+                    <div class="msg-content">
+                        <div class="msg-user">Ana Luiza</div>
+                        <div class="msg-text">Conteúdo incrível! Já estou aplicando</div>
+                        <div class="msg-time">há 2 min</div>
+                    </div>
+                </div>
+                <div class="message">
+                    <div class="avatar">CM</div>
+                    <div class="msg-content">
+                        <div class="msg-user">Carlos M.</div>
+                        <div class="msg-text">O link do material prometido?</div>
+                        <div class="msg-time">há 5 min</div>
+                    </div>
+                </div>
+                <div class="message">
+                    <div class="avatar">JT</div>
+                    <div class="msg-content">
+                        <div class="msg-user">Juliana T.</div>
+                        <div class="msg-text">ótima didática, parabéns!</div>
+                        <div class="msg-time">há 8 min</div>
+                    </div>
+                </div>
+                <div class="message">
+                    <div class="avatar">RF</div>
+                    <div class="msg-content">
+                        <div class="msg-user">Rafael F.</div>
+                        <div class="msg-text">Quando começa a parte de negociação?</div>
+                        <div class="msg-time">há 12 min</div>
+                    </div>
+                </div>
+                <div class="message">
+                    <div class="avatar">PS</div>
+                    <div class="msg-content">
+                        <div class="msg-user">Patrícia S.</div>
+                        <div class="msg-text">já compartilhei com minha equipe 👏</div>
+                        <div class="msg-time">há 15 min</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CAMPO PARA DIGITAR (SIMULADO) -->
+            <div class="chat-input-area">
+                <input type="text" placeholder="Digite sua mensagem..." value="Excelente webinar!" readonly>
+                <button><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

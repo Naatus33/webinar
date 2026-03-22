@@ -1,0 +1,274 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Autenticação — NextAuth.js (modelos obrigatórios)
+
+model User {
+  id            String              @id @default(cuid())
+  name          String?
+  email         String              @unique
+  password      String?             // hash bcrypt
+  role          Role                @default(VENDEDOR)
+  /// VENDEDOR vinculado a um GERENTE (gestor gerencia webinars deste vendedor)
+  managerId     String?
+  manager       User?               @relation("ManagerTeam", fields: [managerId], references: [id], onDelete: SetNull)
+  teamMembers   User[]              @relation("ManagerTeam")
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  webinars      Webinar[]
+  topics        Topic[]
+  resetTokens   PasswordResetToken[]
+  createdAt     DateTime            @default(now())
+
+  @@index([managerId])
+}
+
+enum Role {
+  ADMIN
+  GERENTE
+  VENDEDOR
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expires   DateTime
+  used      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Webinar
+
+model Webinar {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+
+  code String @unique
+  slug String @unique
+
+  status WebinarStatus @default(DRAFT)
+
+  // Configurações Gerais
+  name               String
+  videoUrl           String  @default("")
+  useNativeStreaming Boolean @default(false)
+  startDate          DateTime?
+  startTime          String?
+
+  // Configurações Avançadas
+  redirectEnabled Boolean @default(false)
+  redirectUrl     String?
+  passwordEnabled Boolean @default(false)
+  password        String?
+  replayEnabled   Boolean @default(false)
+  lgpdEnabled     Boolean @default(false)
+  lgpdText        String?
+  customScripts   Json?   // { capture, live, finished } × { head, body }
+
+  // Página de Cadastro
+  regBgImage     String?
+  regLogoUrl     String?
+  regDescription String?
+  regTitle       String?
+  regCtaText     String?
+  regSponsors    Json?   // [{ logoUrl, name }]
+
+  // Visual Builder (config JSON completo)
+  config Json
+
+  // Relações
+  leads        Lead[]
+  chatMessages ChatMessage[]
+  polls        Poll[]
+  webinarTopics WebinarTopic[]
+  visits       WebinarVisit[]
+  viewerPings  ViewerPing[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum WebinarStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  REPLAY
+  FINISHED
+}
+
+// Lead
+
+model Lead {
+  id             String   @id @default(cuid())
+  webinarId      String
+  webinar        Webinar  @relation(fields: [webinarId], references: [id])
+  name           String
+  email          String
+  watchedPercent Int      @default(0)
+  clickedOffer   Boolean  @default(false)
+  lgpdConsent    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([webinarId])
+}
+
+// Chat
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  webinarId String
+  webinar   Webinar  @relation(fields: [webinarId], references: [id])
+  author    String
+  content   String
+  pinned    Boolean  @default(false)
+  deleted   Boolean  @default(false)
+  timestamp Int?
+  createdAt DateTime @default(now())
+
+  @@index([webinarId, createdAt])
+}
+
+// Enquetes
+
+model Poll {
+  id        String   @id @default(cuid())
+  webinarId String
+  webinar   Webinar  @relation(fields: [webinarId], references: [id])
+  question  String
+  closed    Boolean  @default(false)
+  options   PollOption[]
+  createdAt DateTime @default(now())
+
+  @@index([webinarId])
+}
+
+model PollOption {
+  id     String     @id @default(cuid())
+  pollId String
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  text   String
+  votes  PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  id       String     @id @default(cuid())
+  optionId String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  leadId   String?
+
+  @@index([optionId])
+}
+
+// Temas (topics) vinculados ao webinar
+
+model Topic {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name String
+  slug String
+
+  webinarTopics WebinarTopic[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@unique([userId, slug])
+}
+
+model WebinarTopic {
+  id String @id @default(cuid())
+
+  webinarId String
+  webinar   Webinar @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+
+  topicId String
+  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([webinarId, topicId])
+  @@index([topicId])
+}
+
+// Analytics
+
+model WebinarVisit {
+  id        String   @id @default(cuid())
+  webinarId String
+  webinar   Webinar  @relation(fields: [webinarId], references: [id])
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([webinarId, createdAt])
+}
+
+model ViewerPing {
+  id        String   @id @default(cuid())
+  webinarId String
+  webinar   Webinar  @relation(fields: [webinarId], references: [id])
+  leadId    String?
+  minute    Int
+  createdAt DateTime @default(now())
+
+  @@index([webinarId, minute])
+}

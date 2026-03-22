@@ -49,8 +49,19 @@ export function CapturePageClient({ webinar }: CapturePageClientProps) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [leadId, setLeadId] = useState<string | null>(null);
 
-  const { branding } = webinar.config;
+  const { branding, capturePage } = webinar.config;
   const primaryColor = branding.primaryColor;
+  const overlayOpacity = capturePage?.overlayOpacity ?? 0.5;
+  const bgPosition = capturePage?.backgroundPosition ?? { x: 0.5, y: 0.5 };
+  const bgPositionCss =
+    bgPosition &&
+    Number.isFinite(bgPosition.x) &&
+    Number.isFinite(bgPosition.y)
+      ? `${bgPosition.x * 100}% ${bgPosition.y * 100}%`
+      : "center";
+  const logoSize = capturePage?.logoSize ?? "md";
+  const logoSizeClass =
+    logoSize === "sm" ? "h-8" : logoSize === "lg" ? "h-14" : "h-10";
 
   function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,6 +93,10 @@ export function CapturePageClient({ webinar }: CapturePageClientProps) {
 
     const data = await res.json();
     setLeadId(data.id);
+    // O player/monitoramento usa sessionStorage para associar presença ao lead.
+    // Assim, após o cliente acessar "/{slug}", a captura cria o lead e o watch consegue vincular os pings.
+    sessionStorage.setItem("lead_id", data.id);
+    sessionStorage.setItem("lead_name", name);
     setConfirmed(true);
   }
 
@@ -162,11 +177,16 @@ export function CapturePageClient({ webinar }: CapturePageClientProps) {
       style={{
         backgroundImage: webinar.regBgImage ? `url(${webinar.regBgImage})` : undefined,
         backgroundSize: "cover",
-        backgroundPosition: "center",
+      backgroundPosition: webinar.regBgImage ? bgPositionCss : undefined,
         backgroundColor: webinar.regBgImage ? undefined : webinar.config.layout.bgColor,
       }}
     >
-      {webinar.regBgImage && <div className="absolute inset-0 bg-black/50" />}
+      {webinar.regBgImage && (
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: `rgba(0,0,0,${overlayOpacity})` }}
+        />
+      )}
 
       {/* Countdown */}
       {webinar.config.countdown.enabled && webinar.config.countdown.showOnCapture && webinar.startDate && (
@@ -179,22 +199,29 @@ export function CapturePageClient({ webinar }: CapturePageClientProps) {
         {/* Left card */}
         <div className="flex flex-1 flex-col gap-4 rounded-2xl bg-white/10 p-6 backdrop-blur-sm text-white">
           {webinar.regLogoUrl ? (
-            <img src={webinar.regLogoUrl} alt="Logo" className="h-10 w-auto object-contain" />
+            <img
+              src={webinar.regLogoUrl}
+              alt="Logo"
+              className={`${logoSizeClass} w-auto object-contain`}
+            />
           ) : (
             <div className="h-10 w-28 rounded bg-white/20" />
           )}
           <p className="text-sm leading-relaxed text-white/80">
             {webinar.regDescription || webinar.name}
           </p>
-          {webinar.regSponsors.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 border-t border-white/20 pt-3">
+          {webinar.regSponsors.some((s) => Boolean(s.logoUrl)) && (
+            <div className="flex flex-wrap items-center justify-center gap-3 border-t border-white/20 pt-3">
               <span className="text-xs text-white/50">Realização:</span>
               {webinar.regSponsors.map((s, i) =>
                 s.logoUrl ? (
-                  <img key={i} src={s.logoUrl} alt={s.name} className="h-5 w-auto" />
-                ) : (
-                  <span key={i} className="text-xs text-white/60">{s.name}</span>
-                )
+                  <img
+                    key={i}
+                    src={s.logoUrl}
+                    alt={s.name || "Logo patrocinador"}
+                    className="h-5 w-auto"
+                  />
+                ) : null
               )}
             </div>
           )}
