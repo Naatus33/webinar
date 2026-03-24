@@ -35,7 +35,6 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
 
   return (
     <WatchPageClient
-      copyOverrides={copyOverrides}
       webinar={{
         ...webinar,
         startDate: webinar.startDate?.toISOString() ?? null,

@@ -37,6 +37,7 @@ export default async function LiveOpsPage({ params }: LiveOpsPageProps) {
       startTime: true,
       replayEnabled: true,
       config: true,
+      macros: true,
     },
   });
 
@@ -70,10 +71,10 @@ export default async function LiveOpsPage({ params }: LiveOpsPageProps) {
             startTime={webinar.startTime ?? null}
             replayEnabled={webinar.replayEnabled}
             config={webinar.config as WebinarConfig}
+            initialMacros={webinar.macros as any[]}
           />
         </main>
       </div>
     </div>
   );
 }
-

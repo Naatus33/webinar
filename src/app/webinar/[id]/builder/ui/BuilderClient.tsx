@@ -5,7 +5,8 @@ import Link from "next/link";
 import {
   Palette, Type, Play, Tag, AlertTriangle, MessageCircle,
   Users, Layout, Timer, Gift, Shield, CheckSquare, ArrowLeft,
-  ExternalLink, CheckCircle2, Loader2, AlertCircle, Settings, Target, Zap, Flag
+  ExternalLink, CheckCircle2, Loader2, AlertCircle, Settings, Target, Zap, Flag, Sparkles,
+  Monitor, Smartphone, ChevronRight, ChevronLeft, Save
 } from "lucide-react";
 
 import { useWebinarStore } from "@/store/useWebinarStore";
@@ -24,6 +25,8 @@ import { CountdownPanel } from "@/components/builder/CountdownPanel";
 import { OfferPopupPanel } from "@/components/builder/OfferPopupPanel";
 import { SocialProofPanel } from "@/components/builder/SocialProofPanel";
 import { FinishedPanel } from "@/components/builder/FinishedPanel";
+import { MacrosPanel } from "@/components/builder/MacrosPanel";
+import { RoomSettingsTab } from "@/components/builder/RoomSettingsTab";
 
 interface WebinarData {
   id: string;
@@ -49,71 +52,69 @@ interface WebinarData {
   regCtaText: string | null;
   regSponsors: { name: string; logoUrl: string }[];
   config: WebinarConfig;
+  macros: any[];
 }
 
 interface BuilderClientProps {
   webinar: WebinarData;
 }
 
-const TABS = [
-  { id: "branding", label: "Branding", Icon: Palette, component: BrandingPanel },
-  { id: "layout", label: "Layout", Icon: Layout, component: LayoutPanel },
-  { id: "content", label: "Conteúdo", Icon: Type, component: ContentPanel },
-  { id: "video", label: "Vídeo", Icon: Play, component: VideoPanel },
-
-  { id: "chat", label: "Chat", Icon: MessageCircle, component: ChatPanel },
-  { id: "participants", label: "Participantes", Icon: Users, component: ParticipantsPanel },
-  { id: "social-proof", label: "Prova Social", Icon: Shield, component: SocialProofPanel },
-
-  { id: "offer", label: "Oferta", Icon: Tag, component: OfferPanel },
-  { id: "offer-popup", label: "Pop-up Oferta", Icon: Gift, component: OfferPopupPanel },
-  { id: "scarcity", label: "Escassez", Icon: AlertTriangle, component: ScarcityPanel },
-  { id: "countdown", label: "Countdown", Icon: Timer, component: CountdownPanel },
-
-  { id: "finished", label: "Encerramento", Icon: CheckSquare, component: FinishedPanel },
-];
-
-const CATEGORIES = [
-  {
-    id: "fundamentos",
-    label: "Fundamentos",
+const STEPS = [
+  { 
+    id: "fundamentos", 
+    label: "Fundamentos", 
     icon: Settings,
-    description: "Visual e conteúdo base",
-    tabs: ["branding", "layout", "content", "video"]
+    tabs: [
+      { id: "branding", label: "Branding", Icon: Palette, component: BrandingPanel },
+      { id: "layout", label: "Layout", Icon: Layout, component: LayoutPanel },
+      { id: "content", label: "Conteúdo", Icon: Type, component: ContentPanel },
+      { id: "video", label: "Vídeo", Icon: Play, component: VideoPanel },
+    ]
   },
-  {
-    id: "engajamento",
-    label: "Engajamento",
+  { 
+    id: "engajamento", 
+    label: "Engajamento", 
     icon: Target,
-    description: "Chat e prova social",
-    tabs: ["chat", "participants", "social-proof"]
+    tabs: [
+      { id: "chat", label: "Chat", Icon: MessageCircle, component: ChatPanel },
+      { id: "participants", label: "Participantes", Icon: Users, component: ParticipantsPanel },
+      { id: "social-proof", label: "Prova Social", Icon: Shield, component: SocialProofPanel },
+      { id: "room-settings", label: "Sala Live", Icon: Sparkles, component: RoomSettingsTab },
+    ]
   },
-  {
-    id: "conversao",
-    label: "Conversão",
+  { 
+    id: "conversao", 
+    label: "Conversão", 
     icon: Zap,
-    description: "Ofertas e escassez",
-    tabs: ["offer", "offer-popup", "scarcity", "countdown"]
+    tabs: [
+      { id: "offer", label: "Oferta", Icon: Tag, component: OfferPanel },
+      { id: "offer-popup", label: "Pop-up Oferta", Icon: Gift, component: OfferPopupPanel },
+      { id: "scarcity", label: "Escassez", Icon: AlertTriangle, component: ScarcityPanel },
+      { id: "countdown", label: "Countdown", Icon: Timer, component: CountdownPanel },
+      { id: "macros", label: "Macros Live", Icon: Zap, component: MacrosPanel },
+    ]
   },
-  {
-    id: "pos-webinar",
-    label: "Finalização",
+  { 
+    id: "finalizacao", 
+    label: "Finalização", 
     icon: Flag,
-    description: "Comportamento ao fim",
-    tabs: ["finished"]
+    tabs: [
+      { id: "finished", label: "Encerramento", Icon: CheckSquare, component: FinishedPanel },
+    ]
   }
 ];
 
 const SAVE_LABELS: Record<string, { label: string; Icon: React.ElementType; className: string }> = {
-  idle: { label: "Todas alterações salvas", Icon: CheckCircle2, className: "text-muted-foreground" },
-  saving: { label: "Salvando alterações...", Icon: Loader2, className: "animate-spin text-primary" },
+  idle: { label: "Salvo", Icon: CheckCircle2, className: "text-slate-500" },
+  saving: { label: "Salvando...", Icon: Loader2, className: "animate-spin text-primary" },
   saved: { label: "Alterações salvas!", Icon: CheckCircle2, className: "text-emerald-400" },
   error: { label: "Erro ao salvar", Icon: AlertCircle, className: "text-red-400" },
 };
 
 export function BuilderClient({ webinar }: BuilderClientProps) {
-  const [activeCategory, setActiveCategory] = useState("fundamentos");
-  const [activeTab, setActiveTab] = useState("branding");
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [activeTabId, setActiveTabId] = useState("branding");
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
 
   const { loadFromServer, saveStatus } = useWebinarStore();
 
@@ -144,152 +145,195 @@ export function BuilderClient({ webinar }: BuilderClientProps) {
         regCtaText: webinar.regCtaText,
         regSponsors: webinar.regSponsors,
       },
-      webinar.config
+      webinar.config,
+      webinar.macros
     );
   }, [webinar.id, loadFromServer, webinar]);
 
-  const handleCategoryChange = (categoryId: string) => {
-    setActiveCategory(categoryId);
-    const cat = CATEGORIES.find(c => c.id === categoryId);
-    if (cat) setActiveTab(cat.tabs[0]);
-  };
-
-  const ActivePanel = TABS.find((t) => t.id === activeTab)?.component ?? BrandingPanel;
+  const currentStep = STEPS[activeStepIndex];
+  const activeTab = currentStep.tabs.find(t => t.id === activeTabId) || currentStep.tabs[0];
+  const ActivePanel = activeTab.component;
+  
   const saveInfo = SAVE_LABELS[saveStatus] ?? SAVE_LABELS.idle;
   const SaveIcon = saveInfo.Icon;
 
-  const currentCategoryObj = CATEGORIES.find(c => c.id === activeCategory);
-  const currentCategoryTabs = TABS.filter(t => currentCategoryObj?.tabs.includes(t.id));
+  const nextStep = () => {
+    if (activeStepIndex < STEPS.length - 1) {
+      setActiveStepIndex(prev => prev + 1);
+      setActiveTabId(STEPS[activeStepIndex + 1].tabs[0].id);
+    }
+  };
 
-  const configSidebar = (
-    <>
-      <div className="border-b border-border/70 p-4 md:p-5">
-        <h2 className="text-lg font-bold tracking-tight text-foreground">{currentCategoryObj?.label}</h2>
-        <p className="mt-1 text-xs text-muted-foreground">{currentCategoryObj?.description}</p>
-      </div>
-
-      <div className="flex flex-1 flex-col overflow-y-auto overscroll-contain p-2 md:p-3">
-        <div className="flex gap-2 overflow-x-auto pb-2 md:hidden">
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.id;
-            const Icon = cat.icon;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => handleCategoryChange(cat.id)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium motion-transition motion-safe:active:scale-[0.98] ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {cat.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="space-y-1">
-          {currentCategoryTabs.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setActiveTab(id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium motion-transition md:px-4 md:py-3 ${
-                activeTab === id
-                  ? "border border-border/80 bg-card text-primary shadow-sm"
-                  : "border border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-              }`}
-            >
-              <Icon className={`h-4 w-4 shrink-0 ${activeTab === id ? "text-primary" : "text-muted-foreground"}`} />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 border-t border-border/60 pt-4">
-          <ActivePanel />
-        </div>
-      </div>
-    </>
-  );
+  const prevStep = () => {
+    if (activeStepIndex > 0) {
+      setActiveStepIndex(prev => prev - 1);
+      setActiveTabId(STEPS[activeStepIndex - 1].tabs[0].id);
+    }
+  };
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background font-sans md:flex-row">
-      {/* Rail categorias — desktop */}
-      <div className="relative z-10 hidden w-[80px] flex-shrink-0 flex-col items-center border-r border-border/80 bg-card/40 py-4 md:flex">
-        <Link
-          href="/dashboard"
-          className="mb-8 flex h-10 w-10 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground motion-transition hover:bg-muted hover:text-foreground"
-          title="Voltar ao Dashboard"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-
-        <div className="flex flex-col gap-4">
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.id;
-            const Icon = cat.icon;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => handleCategoryChange(cat.id)}
-                title={cat.label}
-                className={`group relative flex h-12 w-12 items-center justify-center rounded-2xl motion-transition motion-safe:active:scale-95 ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-[0_0_24px_rgba(249,177,122,0.35)]"
-                    : "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <Icon className={`h-5 w-5 transition-transform duration-[var(--motion-duration-normal,220ms)] ${isActive ? "scale-110" : "scale-100 group-hover:scale-105"}`} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Painel de configuração */}
-      <div className="relative z-10 flex max-h-[42vh] min-h-0 w-full flex-shrink-0 flex-col border-border/80 bg-card/30 md:max-h-none md:h-full md:w-[min(100%,380px)] md:border-r">
-        {configSidebar}
-      </div>
-
-      {/* Preview */}
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[url('/grid-bg.svg')] bg-center bg-muted/20">
-        <div className="flex flex-shrink-0 items-center justify-between gap-2 border-b border-border/70 bg-card/85 px-3 py-3 backdrop-blur-md md:px-6 md:py-4">
-          <div className="flex min-w-0 items-center gap-2 md:gap-3">
-            <div className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500 motion-reduce:animate-none" />
-            <span className="truncate text-xs font-medium text-muted-foreground md:text-sm">
-              Preview em tempo real
-            </span>
+    <div className="flex h-screen flex-col bg-slate-950 text-slate-200 overflow-hidden font-sans">
+      
+      {/* Top Bar Premium */}
+      <header className="h-16 border-b border-slate-800/60 bg-slate-900/80 backdrop-blur-xl flex items-center justify-between px-6 shrink-0 z-50">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard" className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div className="h-6 w-px bg-slate-800 mx-2" />
+          <div>
+            <h1 className="text-sm font-black text-white uppercase tracking-widest">{webinar.name}</h1>
+            <p className="text-[10px] text-slate-500 font-bold uppercase">Construtor de Experiência</p>
           </div>
+        </div>
 
-          <div className="flex shrink-0 items-center gap-2 md:gap-4">
-            <div className="hidden items-center gap-2 rounded-full border border-border/80 bg-muted/40 px-2.5 py-1.5 text-xs sm:flex">
-              <SaveIcon className={`h-4 w-4 ${saveInfo.className}`} />
-              <span className="font-medium text-foreground">{saveInfo.label}</span>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950 border border-slate-800">
+            <SaveIcon className={`h-3.5 w-3.5 ${saveInfo.className}`} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{saveInfo.label}</span>
+          </div>
+          <a
+            href={`/live/${webinar.code}/${webinar.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-primary hover:brightness-110 text-white px-4 py-2 rounded-xl text-xs font-black transition-all shadow-lg shadow-primary/20"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> PUBLICAR
+          </a>
+        </div>
+      </header>
+
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* Sidebar de Navegação por Passos */}
+        <aside className="w-72 border-r border-slate-800/60 bg-slate-900/40 flex flex-col shrink-0">
+          <div className="p-6 space-y-8 flex-1 overflow-y-auto">
+            
+            {/* Indicador de Passos */}
+            <div className="space-y-4">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-2">Fluxo de Criação</h2>
+              <div className="space-y-1">
+                {STEPS.map((step, idx) => {
+                  const Icon = step.icon;
+                  const isActive = activeStepIndex === idx;
+                  const isPast = activeStepIndex > idx;
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => {
+                        setActiveStepIndex(idx);
+                        setActiveTabId(step.tabs[0].id);
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-black transition-all border ${
+                        isActive 
+                          ? "bg-primary/10 border-primary/30 text-primary shadow-lg shadow-primary/5" 
+                          : "border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+                      }`}
+                    >
+                      <div className={`h-6 w-6 rounded-lg flex items-center justify-center ${isActive ? 'bg-primary text-white' : isPast ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-800 text-slate-600'}`}>
+                        {isPast ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+                      </div>
+                      <span className="uppercase tracking-widest">{step.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <a
-              href={`/live/${webinar.code}/${webinar.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-xs font-medium text-foreground motion-transition motion-safe:hover:bg-muted/60 md:gap-2 md:text-sm"
-            >
-              <ExternalLink className="h-4 w-4" />
-              <span className="hidden sm:inline">Ver Página</span>
-              <span className="sm:hidden">Abrir</span>
-            </a>
+            {/* Sub-abas do Passo Atual */}
+            <div className="space-y-4 pt-4 border-t border-slate-800/60">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 px-2">Configurações</h2>
+              <div className="space-y-1">
+                {currentStep.tabs.map((tab) => {
+                  const Icon = tab.Icon;
+                  const isActive = activeTabId === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTabId(tab.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                        isActive 
+                          ? "bg-slate-800 text-white border border-slate-700" 
+                          : "text-slate-500 hover:text-slate-300"
+                      }`}
+                    >
+                      <Icon className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex min-h-0 flex-1 justify-center overflow-y-auto p-3 sm:p-6 md:p-8">
-          <div className="w-full max-w-[1200px] overflow-hidden rounded-2xl border border-border/70 bg-background/40 shadow-2xl ring-1 ring-border/30 motion-safe:transition-shadow motion-safe:hover:shadow-[0_24px_64px_rgba(0,0,0,0.35)]">
-            <WebinarPreview />
+          {/* Navegação de Rodapé */}
+          <div className="p-4 border-t border-slate-800/60 bg-slate-900/60 flex gap-2">
+            <button 
+              onClick={prevStep}
+              disabled={activeStepIndex === 0}
+              className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-not-allowed transition-all text-[10px] font-black uppercase"
+            >
+              <ChevronLeft className="h-4 w-4" /> Voltar
+            </button>
+            <button 
+              onClick={nextStep}
+              disabled={activeStepIndex === STEPS.length - 1}
+              className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-primary hover:brightness-110 disabled:opacity-30 transition-all text-[10px] font-black uppercase text-white"
+            >
+              Próximo <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-        </div>
+        </aside>
+
+        {/* Área Central: Editor */}
+        <main className="flex-1 overflow-y-auto bg-slate-950 p-8 scrollbar-hide">
+          <div className="max-w-3xl mx-auto space-y-8">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                <activeTab.Icon className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-white tracking-tight">{activeTab.label}</h2>
+                <p className="text-sm text-slate-500">Personalize os detalhes do seu webinar em tempo real.</p>
+              </div>
+            </div>
+            
+            <div className="bg-slate-900/30 rounded-3xl border border-slate-800/60 p-8 shadow-2xl backdrop-blur-sm">
+              <ActivePanel />
+            </div>
+          </div>
+        </main>
+
+        {/* Sidebar de Preview (Desktop/Mobile) */}
+        <aside className="w-[450px] border-l border-slate-800/60 bg-slate-900/20 flex flex-col shrink-0 overflow-hidden">
+          <div className="h-14 border-b border-slate-800/60 flex items-center justify-between px-6 bg-slate-900/40">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Visualização</span>
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button 
+                onClick={() => setPreviewMode("desktop")}
+                className={`p-1.5 rounded-lg transition-all ${previewMode === "desktop" ? 'bg-slate-800 text-primary shadow-inner' : 'text-slate-600 hover:text-slate-400'}`}
+              >
+                <Monitor className="h-4 w-4" />
+              </button>
+              <button 
+                onClick={() => setPreviewMode("mobile")}
+                className={`p-1.5 rounded-lg transition-all ${previewMode === "mobile" ? 'bg-slate-800 text-primary shadow-inner' : 'text-slate-600 hover:text-slate-400'}`}
+              >
+                <Smartphone className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-slate-950/50 p-6 flex items-center justify-center overflow-hidden">
+            <div className={`transition-all duration-500 shadow-2xl border border-slate-800 rounded-3xl overflow-hidden bg-slate-900 ${
+              previewMode === "mobile" ? 'w-[280px] h-[560px]' : 'w-full h-full'
+            }`}>
+              <div className="w-full h-full overflow-y-auto scrollbar-hide">
+                <WebinarPreview />
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

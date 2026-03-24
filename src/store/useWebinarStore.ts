@@ -17,7 +17,6 @@ interface WebinarMeta {
   redirectEnabled: boolean;
   redirectUrl: string | null;
   passwordEnabled: boolean;
-  /** Indica se existe senha de captura definida no servidor (nunca enviar o valor ao cliente). */
   hasCapturePassword: boolean;
   replayEnabled: boolean;
   lgpdEnabled: boolean;
@@ -34,14 +33,16 @@ interface WebinarStoreState {
   webinarId: string | null;
   meta: WebinarMeta | null;
   config: WebinarConfig;
+  macros: any[];
   saveStatus: SaveStatus;
   lastSavedSnapshot: string | null;
 
-  loadFromServer: (webinarId: string, meta: WebinarMeta, config: WebinarConfig) => void;
+  loadFromServer: (webinarId: string, meta: WebinarMeta, config: WebinarConfig, macros?: any[]) => void;
   updateConfig: <K extends keyof WebinarConfig>(
     section: K,
     updates: Partial<WebinarConfig[K]>
   ) => void;
+  updateWebinar: (patch: Partial<{ config: WebinarConfig; macros: any[] }>) => void;
   setConfigField: (path: string[], value: unknown) => void;
   resetFromTemplate: (config: WebinarConfig) => void;
   setSaveStatus: (status: SaveStatus) => void;
@@ -52,12 +53,13 @@ export const useWebinarStore = create<WebinarStoreState>()(
     webinarId: null,
     meta: null,
     config: getDefaultConfig(),
+    macros: [],
     saveStatus: "idle",
     lastSavedSnapshot: null,
 
-    loadFromServer(webinarId, meta, config) {
-      const snap = JSON.stringify(config);
-      set({ webinarId, meta, config, lastSavedSnapshot: snap, saveStatus: "idle" });
+    loadFromServer(webinarId, meta, config, macros = []) {
+      const snap = JSON.stringify({ config, macros });
+      set({ webinarId, meta, config, macros, lastSavedSnapshot: snap, saveStatus: "idle" });
     },
 
     updateConfig(section, updates) {
@@ -66,6 +68,13 @@ export const useWebinarStore = create<WebinarStoreState>()(
           ...state.config,
           [section]: { ...state.config[section], ...updates },
         },
+      }));
+    },
+
+    updateWebinar(patch) {
+      set((state) => ({
+        ...state,
+        ...patch
       }));
     },
 
@@ -96,14 +105,14 @@ export const useWebinarStore = create<WebinarStoreState>()(
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 useWebinarStore.subscribe(
-  (state) => state.config,
-  async (config) => {
+  (state) => ({ config: state.config, macros: state.macros }),
+  async ({ config, macros }) => {
     const { webinarId, lastSavedSnapshot, setSaveStatus } = useWebinarStore.getState();
 
     if (!webinarId) return;
 
-    const snapshot = JSON.stringify(config);
-    if (snapshot === lastSavedSnapshot) return; // sem mudanças reais
+    const snapshot = JSON.stringify({ config, macros });
+    if (snapshot === lastSavedSnapshot) return;
 
     if (debounceTimer) clearTimeout(debounceTimer);
 
@@ -113,12 +122,11 @@ useWebinarStore.subscribe(
         const res = await fetch(`/api/webinars/${webinarId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ config }),
+          body: JSON.stringify({ config, macros }),
         });
 
         if (res.ok) {
           useWebinarStore.setState({ lastSavedSnapshot: snapshot, saveStatus: "saved" });
-          // Volta para "idle" após 2s
           setTimeout(() => {
             const curr = useWebinarStore.getState();
             if (curr.saveStatus === "saved") curr.setSaveStatus("idle");

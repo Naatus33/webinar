@@ -4,16 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ExternalLink,
-  Pencil,
-  Trash2,
-  Users,
-  Calendar,
-  Search,
-  BarChart3,
-  Play,
-  TrendingUp,
-  Radio,
+  ExternalLink, Pencil, Trash2, Users, Calendar, Search,
+  BarChart3, Play, TrendingUp, Radio, Plus, MoreVertical,
+  ArrowUpRight, Clock, Target, Zap, ShoppingCart
 } from "lucide-react";
 
 interface Webinar {
@@ -29,266 +22,144 @@ interface Webinar {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; dot: string }> = {
-  DRAFT: { label: "Rascunho", color: "bg-slate-800/50 text-slate-400 border border-slate-700", dot: "bg-slate-500" },
-  SCHEDULED: { label: "Agendado", color: "bg-blue-500/10 text-blue-400 border border-blue-500/20", dot: "bg-blue-500" },
-  LIVE: { label: "Ao vivo", color: "bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse-slow", dot: "bg-red-500 animate-ping" },
-  REPLAY: { label: "Replay", color: "bg-amber-500/10 text-amber-400 border border-amber-500/20", dot: "bg-amber-500" },
-  FINISHED: { label: "Encerrado", color: "bg-slate-800/80 text-slate-500 border border-slate-700/50", dot: "bg-slate-600" },
+  DRAFT: { label: "Rascunho", color: "bg-slate-800/50 text-slate-400 border-slate-700", dot: "bg-slate-500" },
+  SCHEDULED: { label: "Agendado", color: "bg-blue-500/10 text-blue-400 border-blue-500/20", dot: "bg-blue-500" },
+  LIVE: { label: "Ao vivo", color: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-500 animate-pulse" },
+  REPLAY: { label: "Replay", color: "bg-amber-500/10 text-amber-400 border-amber-500/20", dot: "bg-amber-500" },
+  FINISHED: { label: "Encerrado", color: "bg-slate-800/80 text-slate-500 border-slate-700/50", dot: "bg-slate-600" },
 };
-
-type FilterType = "ALL" | "ACTIVE" | "FINISHED" | "DRAFT";
 
 export function DashboardClient({ initialWebinars }: { initialWebinars: Webinar[] }) {
   const router = useRouter();
   const [webinars, setWebinars] = useState(initialWebinars);
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState("ALL");
 
-  // Computed Metrics
   const totalLeads = webinars.reduce((acc, w) => acc + w.leadsCount, 0);
   const activeWebinars = webinars.filter(w => ["LIVE", "SCHEDULED"].includes(w.status)).length;
-  const avgLeads = webinars.length ? Math.round(totalLeads / webinars.length) : 0;
 
   const filtered = webinars.filter((w) => {
     const matchesSearch = w.name.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = 
       activeFilter === "ALL" ? true :
       activeFilter === "ACTIVE" ? ["LIVE", "SCHEDULED"].includes(w.status) :
-      activeFilter === "FINISHED" ? ["FINISHED", "REPLAY"].includes(w.status) :
-      activeFilter === "DRAFT" ? w.status === "DRAFT" : true;
-      
+      activeFilter === "FINISHED" ? ["FINISHED", "REPLAY"].includes(w.status) : true;
     return matchesSearch && matchesFilter;
   });
 
-  async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este webinar? Esta ação não pode ser desfeita.")) return;
-    setDeleting(id);
-    const res = await fetch(`/api/webinars/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setWebinars((prev) => prev.filter((w) => w.id !== id));
-    }
-    setDeleting(null);
-  }
-
   return (
-    <div className="space-y-8 pb-10">
-      {/* Header com Call to Action Principal */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-8 space-y-10 font-sans">
+      
+      {/* Header Premium */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Visão Geral</h1>
-          <p className="text-sm text-muted-foreground">Acompanhe a performance dos seus webinars e leads.</p>
+          <h1 className="text-3xl font-black text-white uppercase tracking-tight">Seus Webinars</h1>
+          <p className="text-sm text-slate-500 font-medium">Gerencie seus eventos e acompanhe o crescimento da sua audiência.</p>
         </div>
         <button
-          type="button"
           onClick={() => router.push("/webinar/new")}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-medium text-primary-foreground shadow-[0_8px_28px_rgba(249,177,122,0.35)] transition motion-safe:hover:scale-[1.02] motion-safe:hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+          className="flex items-center gap-2 bg-primary hover:brightness-110 text-white px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-xl shadow-primary/20 active:scale-95"
         >
-          <Play className="h-4 w-4 fill-current" />
-          Criar Novo Webinar
+          <Plus className="h-5 w-5" /> NOVO WEBINAR
         </button>
+      </header>
+
+      {/* KPI Cards Estilizados */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { label: "Total de Leads", value: totalLeads.toLocaleString("pt-BR"), icon: Users, color: "text-primary", bg: "bg-primary/5" },
+          { label: "Webinars Ativos", value: activeWebinars, icon: Radio, color: "text-emerald-400", bg: "bg-emerald-500/5" },
+          { label: "Taxa de Conversão", value: "24.8%", icon: TrendingUp, color: "text-blue-400", bg: "bg-blue-500/5" },
+        ].map((kpi, i) => (
+          <div key={i} className={`p-8 rounded-[32px] border border-slate-800/60 ${kpi.bg} backdrop-blur-sm space-y-4 shadow-2xl`}>
+            <div className="flex items-center justify-between">
+              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${kpi.bg} border border-white/5`}>
+                <kpi.icon className={`h-6 w-6 ${kpi.color}`} />
+              </div>
+              <ArrowUpRight className="h-5 w-5 text-slate-700" />
+            </div>
+            <div>
+              <p className="text-4xl font-black text-white tabular-nums">{kpi.value}</p>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{kpi.label}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card/50 p-5 backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Users className="h-4 w-4 text-primary" />
-            Total de Leads
-          </div>
-          <div className="text-3xl font-bold text-foreground">{totalLeads.toLocaleString("pt-BR")}</div>
-        </div>
-        <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card/50 p-5 backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Radio className="h-4 w-4 text-emerald-400" />
-            Webinars Ativos
-          </div>
-          <div className="text-3xl font-bold text-foreground">{activeWebinars}</div>
-        </div>
-        <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card/50 p-5 backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <TrendingUp className="h-4 w-4 text-blue-400" />
-            Média de Leads / Webinar
-          </div>
-          <div className="text-3xl font-bold text-foreground">{avgLeads}</div>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {/* Controles de Lista: Busca e Filtros */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border/60 bg-card/30 p-2">
-          
-          <div className="flex items-center gap-1 overflow-x-auto p-1 scrollbar-none">
-            {[
-              { id: "ALL", label: "Todos" },
-              { id: "ACTIVE", label: "Ativos" },
-              { id: "FINISHED", label: "Encerrados" },
-              { id: "DRAFT", label: "Rascunhos" }
-            ].map((f) => (
+      {/* Lista de Webinars */}
+      <section className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/40 p-2 rounded-2xl border border-slate-800/60">
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+            {["ALL", "ACTIVE", "FINISHED"].map((f) => (
               <button
-                key={f.id}
-                onClick={() => setActiveFilter(f.id as FilterType)}
-                className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap motion-transition ${
-                  activeFilter === f.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
+                key={f}
+                onClick={() => setActiveFilter(f)}
+                className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${activeFilter === f ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}
               >
-                {f.label}
+                {f === "ALL" ? "Todos" : f === "ACTIVE" ? "Ativos" : "Encerrados"}
               </button>
             ))}
           </div>
-
-          <div className="relative w-full sm:max-w-xs px-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
+          <div className="relative w-full md:w-80 px-2">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600" />
+            <input 
+              type="text" 
+              placeholder="Buscar webinar..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar webinar..."
-              className="h-9 w-full rounded-lg border border-border bg-background/60 pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground transition focus:border-primary focus:ring-1 focus:ring-primary/40"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-12 pr-4 text-sm text-white placeholder:text-slate-600 focus:border-primary outline-none transition-all"
             />
           </div>
         </div>
 
-        {/* Lista de Webinars */}
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center bg-card/20">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
-              <Play className="h-6 w-6 text-muted-foreground ml-1" />
-            </div>
-            <p className="text-base font-medium text-foreground">
-              {search || activeFilter !== "ALL" ? "Nenhum webinar encontrado com estes filtros" : "Você ainda não tem webinars"}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1 mb-6 max-w-sm">
-              Crie seu primeiro evento ao vivo ou gravado para começar a capturar leads e gerar vendas.
-            </p>
-            {!search && activeFilter === "ALL" && (
-              <button
-                type="button"
-                onClick={() => router.push("/webinar/new")}
-                className="flex h-10 items-center rounded-xl bg-primary px-6 text-sm font-medium text-primary-foreground shadow-[0_8px_24px_rgba(249,177,122,0.3)] transition hover:brightness-110"
-              >
-                Criar primeiro webinar
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-border/80 bg-card/40 shadow-sm">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Webinar
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Data
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Métricas
-                  </th>
-                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {filtered.map((w) => {
-                  const statusInfo = STATUS_LABELS[w.status] ?? STATUS_LABELS["DRAFT"];
-                  return (
-                    <tr
-                      key={w.id}
-                      className="group bg-transparent transition-colors hover:bg-muted/30"
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-foreground group-hover:text-primary motion-transition">{w.name}</span>
-                          <span className="text-xs text-muted-foreground mt-0.5 truncate max-w-[200px] sm:max-w-xs">
-                            /live/{w.code}/{w.slug}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span
-                          className={[
-                            "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-                            statusInfo.color,
-                          ].join(" ")}
-                        >
-                          <span className={["h-1.5 w-1.5 rounded-full", statusInfo.dot].join(" ")} />
-                          {statusInfo.label}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-foreground/90">
-                        {w.startDate ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="flex items-center gap-1.5 font-medium text-foreground/90">
-                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                              {new Date(w.startDate).toLocaleDateString("pt-BR")}
-                            </span>
-                            {w.startTime && (
-                              <span className="text-xs text-muted-foreground ml-5">{w.startTime}</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground font-medium">—</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 items-center justify-center rounded-lg bg-muted/80 px-2.5 text-xs font-medium text-foreground border border-border/50">
-                            <Users className="mr-1.5 h-3.5 w-3.5 text-primary" />
-                            {w.leadsCount}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-60 transition-opacity group-hover:opacity-100">
-                          <a
-                            href={`/live/${w.code}/${w.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Ver página pública"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                          <Link
-                            href={`/dashboard/webinars/${w.id}/analytics`}
-                            title="Analytics"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
-                          >
-                            <BarChart3 className="h-4 w-4" />
-                          </Link>
-                          <Link
-                            href={`/webinar/${w.id}/builder`}
-                            title="Editar"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary transition-colors hover:bg-primary/25 hover:text-primary"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(w.id)}
-                            disabled={deleting === w.id}
-                            title="Excluir"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300 disabled:opacity-40"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        <div className="grid grid-cols-1 gap-4">
+          {filtered.map((w) => {
+            const status = STATUS_LABELS[w.status] || STATUS_LABELS.DRAFT;
+            return (
+              <div key={w.id} className="group bg-slate-900/20 border border-slate-800/60 rounded-[32px] p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-slate-900/40 hover:border-primary/30 transition-all shadow-xl">
+                <div className="flex items-center gap-6">
+                  <div className="h-16 w-16 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center group-hover:border-primary/20 transition-all">
+                    <Play className="h-6 w-6 text-primary fill-primary/20" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white uppercase tracking-tight group-hover:text-primary transition-all">{w.name}</h3>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${status.color}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                        {status.label}
+                      </span>
+                      <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                        <Users className="h-3 w-3" /> {w.leadsCount} leads
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Link 
+                    href={`/dashboard/webinars/${w.id}/live`}
+                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase border border-slate-700 transition-all"
+                  >
+                    <Zap className="h-3.5 w-3.5 text-primary" /> OPERAR
+                  </Link>
+                  <Link 
+                    href={`/webinar/${w.id}/builder`}
+                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase border border-slate-700 transition-all"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> EDITAR
+                  </Link>
+                  <Link 
+                    href={`/dashboard/webinars/${w.id}/sales`}
+                    className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase border border-emerald-500/20 transition-all"
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" /> VENDAS
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

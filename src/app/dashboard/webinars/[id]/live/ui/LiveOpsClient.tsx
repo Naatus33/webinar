@@ -3,28 +3,19 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  MessageCircle,
-  BarChart2,
-  PlayCircle,
-  PauseCircle,
-  SkipForward,
-  Trash2,
-  Pin,
-  RefreshCcw,
-  Timer,
-  AlertTriangle,
+  MessageCircle, BarChart2, PlayCircle, PauseCircle, SkipForward, Trash2, Pin,
+  RefreshCcw, Timer, AlertTriangle, Zap, ShieldAlert, Keyboard, CheckCircle2,
+  Wifi, WifiOff, Tag, ShoppingCart, Plus, Minus, Eye, EyeOff, Sparkles, Heart,
+  Bell, Settings, Users, Activity, MousePointer2, TrendingUp, Clock
 } from "lucide-react";
 
 import type { WebinarConfig } from "@/lib/webinar-templates";
 import { PollAdmin } from "@/components/polls/PollAdmin";
-import { computePublicWatchPhase, webinarStartDateTime } from "@/lib/webinar-timing";
-import { useChatSse } from "@/lib/useChatSse";
+import { computePublicWatchPhase } from "@/lib/webinar-timing";
+import { useWebinarSse } from "@/lib/useWebinarSse";
 
-// Prisma enums nem sempre aparecem como export de tipo no client.
-// Mantemos uma união local para tipar estado e inputs do LiveOps.
 type WebinarStatus = "DRAFT" | "SCHEDULED" | "LIVE" | "REPLAY" | "FINISHED";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
 
 interface LiveOpsClientProps {
@@ -38,6 +29,7 @@ interface LiveOpsClientProps {
   startTime: string | null;
   replayEnabled: boolean;
   config: WebinarConfig;
+  initialMacros?: any[];
 }
 
 export function LiveOpsClient({
@@ -50,41 +42,38 @@ export function LiveOpsClient({
   startDate,
   startTime,
   replayEnabled,
-  config,
+  config: initialConfig,
+  initialMacros = [],
 }: LiveOpsClientProps) {
   const [status, setStatus] = useState<WebinarStatus>(initialStatus);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "offer" | "scarcity" | "alerts">("chat");
-  const [showOffer, setShowOffer] = useState<boolean>(config.offer.active);
-  const [showScarcity, setShowScarcity] = useState<boolean>(config.scarcity.enabled);
-  const [showVideoControls, setShowVideoControls] = useState<boolean>(!config.video.hideControls);
+  
+  // SSE unificado
+  const { messages, polls, status: sseStatus, config: sseConfig, spots, connected } = useWebinarSse(webinarId, true, 1500);
+  
+  const config = sseConfig || initialConfig;
+  const currentStatus = (sseStatus as WebinarStatus) || status;
 
   const [phase, setPhase] = useState<"waiting" | "live" | "replay">("live");
-  const [countdown, setCountdown] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
-  const [webinarSeconds, setWebinarSeconds] = useState(0);
   const [playerSeconds, setPlayerSeconds] = useState(0);
-  const [hasPlayerProgress, setHasPlayerProgress] = useState(false);
-  const [playerActive, setPlayerActive] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: string; next: WebinarStatus } | null>(null);
+  const [lastActionTime, setLastActionTime] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"chat" | "polls" | "settings">("chat");
 
-  const debugFirstProgressRef = useRef(false);
-  const debugProgressBucketRef = useRef<number>(-1);
-  const debugOverlayBucketRef = useRef<number>(-1);
-  const debugLastActiveTabRef = useRef<typeof activeTab>("chat");
+  const macros = initialMacros.length > 0 ? initialMacros : [];
 
-  const [macros] = useState<string[]>([
-    "Seja bem-vindo! De onde você está falando?",
-    "Coloque aqui suas dúvidas que vamos responder no final.",
-    "Quem ficar até o fim vai receber uma condição especial.",
-  ]);
+  const parseMessage = useCallback((text: string) => {
+    return text.replace(/{{webinar_name}}/g, webinarName)
+               .replace(/{{status}}/g, currentStatus);
+  }, [webinarName, currentStatus]);
 
-  const chatEnabled = config.chat.enabled;
-  const { messages, connected } = useChatSse(webinarId, chatEnabled, 1500);
-  const loadingChat = chatEnabled && connected && messages.length === 0;
-
-  const pinned = messages.find((m) => m.pinned);
-
-  async function changeStatus(next: WebinarStatus) {
+  async function changeStatus(next: WebinarStatus, force = false) {
+    if (!force && (next === "FINISHED" || next === "REPLAY") && currentStatus === "LIVE") {
+      setConfirmAction({ type: "status", next });
+      return;
+    }
     setUpdatingStatus(true);
+    setConfirmAction(null);
     try {
       const res = await fetch(`/api/webinars/${webinarId}/status`, {
         method: "PATCH",
@@ -94,14 +83,45 @@ export function LiveOpsClient({
       if (res.ok) {
         const data = (await res.json()) as { status: WebinarStatus };
         setStatus(data.status);
+        setLastActionTime(Date.now());
       }
     } finally {
       setUpdatingStatus(false);
     }
   }
 
-  async function sendMacro(content: string) {
-    await fetch(`/api/webinars/${webinarId}/chat`, {
+  async function updateConfig(patch: Partial<WebinarConfig>) {
+    const newConfig = { ...config, ...patch };
+    await fetch(`/api/webinars/${webinarId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config: newConfig }),
+    });
+    setLastActionTime(Date.now());
+  }
+
+  async function updateSpots(delta: number) {
+    const newCount = Math.max(0, (spots.count || 0) + delta);
+    await fetch(`/api/webinars/${webinarId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spotsCount: newCount }),
+    });
+    setLastActionTime(Date.now());
+  }
+
+  async function toggleSpotsVisibility() {
+    await fetch(`/api/webinars/${webinarId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ showSpots: !spots.show }),
+    });
+    setLastActionTime(Date.now());
+  }
+
+  async function sendMacro(macro: any) {
+    const content = parseMessage(macro.text);
+    const res = await fetch(`/api/webinars/${webinarId}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -110,777 +130,252 @@ export function LiveOpsClient({
         timestamp: config.chat.mode === "replay" ? Math.floor(playerSeconds) : undefined,
       }),
     });
+
+    if (res.ok && macro.pin) {
+      const data = await res.json();
+      if (data.id) await fetch(`/api/webinars/${webinarId}/chat/${data.id}`, { method: "PATCH" });
+    }
+
+    if (macro.action === "offer") {
+      await updateConfig({ offer: { ...config.offer, active: true } });
+    } else if (macro.action === "scarcity") {
+      await updateConfig({ scarcity: { ...config.scarcity, enabled: true } });
+    }
+    setLastActionTime(Date.now());
   }
-
-  async function pinMessage(id: string) {
-    await fetch(`/api/webinars/${webinarId}/chat/${id}`, { method: "PATCH" });
-  }
-
-  async function deleteMessage(id: string) {
-    await fetch(`/api/webinars/${webinarId}/chat/${id}`, { method: "DELETE" });
-  }
-
-  const PHASE_COLORS = useMemo(
-    () => ({
-      green: "#10B981",
-      yellow: "#EAB308",
-      orange: "#F97316",
-      red: "#EF4444",
-    }),
-    [],
-  );
-
-  const computeStartDateTime = useCallback(
-    () => webinarStartDateTime(startDate, startTime),
-    [startDate, startTime],
-  );
-
-  const updatePhase = useCallback(() => {
-    const { phase: p, secondsUntilStart, secondsSinceStart } = computePublicWatchPhase({
-      startDate,
-      startTime,
-      replayEnabled,
-      status,
-    });
-    setPhase(p);
-    if (secondsUntilStart != null && secondsUntilStart > 0) {
-      const hours = Math.floor(secondsUntilStart / 3600);
-      const minutes = Math.floor((secondsUntilStart % 3600) / 60);
-      const seconds = secondsUntilStart % 60;
-      setCountdown({ hours, minutes, seconds });
-      setWebinarSeconds(0);
-    } else {
-      setCountdown(null);
-      setWebinarSeconds(p === "waiting" ? 0 : secondsSinceStart);
-    }
-  }, [startDate, startTime, replayEnabled, status]);
-
-  useEffect(() => {
-    updatePhase();
-    const interval = setInterval(updatePhase, 1000);
-    return () => clearInterval(interval);
-  }, [updatePhase]);
-
-  useEffect(() => {
-    if (phase === "waiting") {
-      setPlayerActive(false);
-      setPlayerSeconds(0);
-      setHasPlayerProgress(false);
-    } else {
-      // Espera o `onReady` do player para começar de verdade.
-      setPlayerActive(false);
-      setHasPlayerProgress(false);
-    }
-  }, [phase]);
-
-  const overlaySeconds = hasPlayerProgress ? playerSeconds : webinarSeconds;
-
-  // #region agent log
-  useEffect(() => {
-    if (debugLastActiveTabRef.current === activeTab) return;
-    debugLastActiveTabRef.current = activeTab;
-    fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "9b991b",
-      },
-      body: JSON.stringify({
-        sessionId: "9b991b",
-        runId: "pre-fix",
-        hypothesisId: "H4_activeTabUI",
-        location: "LiveOpsClient.tsx:activeTab",
-        message: "Alternou aba no painel interno",
-        data: {
-          activeTab,
-          showOffer,
-          showScarcity,
-          showVideoControls,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }, [activeTab, showOffer, showScarcity, showVideoControls]);
-  // #endregion agent log
-
-  // #region agent log
-  useEffect(() => {
-    const bucket = Math.floor(overlaySeconds / 30);
-    if (bucket !== debugOverlayBucketRef.current && bucket <= 4) {
-      debugOverlayBucketRef.current = bucket;
-      fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "9b991b",
-        },
-        body: JSON.stringify({
-          sessionId: "9b991b",
-          runId: "pre-fix",
-          hypothesisId: "H3_overlaySeconds",
-          location: "LiveOpsClient.tsx:overlaySeconds",
-          message: "overlaySeconds usado para oferta/escassez",
-          data: {
-            phase,
-            hasPlayerProgress,
-            playerSeconds,
-            webinarSeconds,
-            overlaySeconds,
-            bucket,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-    }
-  }, [overlaySeconds, hasPlayerProgress, playerSeconds, webinarSeconds, phase]);
-  // #endregion agent log
-
-  const offerComputed = useMemo(() => {
-    const offer = config.offer;
-    if (!offer.colorTimer.enabled) {
-      return {
-        offerPhase: "green" as const,
-        remainingSeconds: null,
-        text: "Quero participar!",
-        color: offer.active ? config.branding.primaryColor : config.branding.primaryColor,
-      };
-    }
-
-    const phases = ["green", "yellow", "orange", "red"] as const;
-    let cumulative = 0;
-    for (const p of phases) {
-      cumulative += offer.colorTimer.phases[p].seconds;
-      if (overlaySeconds < cumulative) {
-        const remainingSeconds = cumulative - overlaySeconds;
-        return {
-          offerPhase: p,
-          remainingSeconds,
-          text: offer.colorTimer.phases[p].text,
-          color: PHASE_COLORS[p],
-        };
-      }
-    }
-
-    return {
-      offerPhase: "red" as const,
-      remainingSeconds: 0,
-      text: offer.colorTimer.phases.red.text,
-      color: PHASE_COLORS.red,
-    };
-  }, [PHASE_COLORS, config.branding.primaryColor, config.offer, overlaySeconds]);
-
-  const scarcityComputed = useMemo(() => {
-    const scarcity = config.scarcity;
-    if (!scarcity.timer.enabled) {
-      return {
-        bg: PHASE_COLORS.green,
-        remainingSeconds: null as number | null,
-      };
-    }
-
-    const remainingSeconds = Math.max(0, scarcity.timer.totalSeconds - overlaySeconds);
-    const { thresholds } = scarcity.timer;
-    const bg =
-      remainingSeconds >= thresholds.green.to
-        ? PHASE_COLORS.green
-        : remainingSeconds >= thresholds.yellow.to
-          ? PHASE_COLORS.yellow
-          : remainingSeconds >= thresholds.orange.to
-            ? PHASE_COLORS.orange
-            : PHASE_COLORS.red;
-
-    return { bg, remainingSeconds };
-  }, [PHASE_COLORS, config.scarcity, overlaySeconds]);
-
-  const computeTargetSecondsNow = useCallback(() => {
-    const startDateTime = computeStartDateTime();
-    if (!startDateTime) return 0;
-    return Math.max(0, Math.floor((Date.now() - startDateTime.getTime()) / 1000));
-  }, [computeStartDateTime]);
-
-  // #region agent log
-  useEffect(() => {
-    const startDateTime = computeStartDateTime();
-    fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "9b991b",
-      },
-      body: JSON.stringify({
-        sessionId: "9b991b",
-        runId: "pre-fix",
-        hypothesisId: "H1_phaseCalc",
-        location: "LiveOpsClient.tsx:init",
-        message: "Props timing do LiveOpsClient",
-        data: {
-          webinarId,
-          hasVideoUrl: Boolean(videoUrl),
-          startDate,
-          startTime,
-          replayEnabled,
-          hasStartDateTime: Boolean(startDateTime),
-          startDateTimeISO: startDateTime?.toISOString() ?? null,
-          configOfferActive: config.offer.active,
-          configScarcityEnabled: config.scarcity.enabled,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  // #endregion agent log
 
   return (
-    <div className="relative">
-      {/* Player fixo no canto - sincronizado com o timing do webinar */}
-      <div className="fixed bottom-3 right-3 z-40 w-[280px] h-[157px] sm:w-[320px] sm:h-[180px] md:w-[420px] md:h-[236px] rounded-2xl overflow-hidden bg-black shadow-2xl ring-1 ring-white/10">
-        <div className="relative h-full w-full">
-          {phase === "waiting" ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/70 px-3 text-center">
-              <div className="mb-4 h-14 w-14 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                <Timer className="h-7 w-7 text-white/60" />
-              </div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">O evento começará em breve</p>
-              <h1 className="mt-3 text-sm font-semibold text-white/90 truncate">{webinarName}</h1>
-              {countdown && (
-                <div className="mt-4 flex items-center justify-center gap-3 text-white">
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-bold font-mono">{String(countdown.hours).padStart(2, "0")}</span>
-                    <span className="text-[10px] text-white/60 uppercase">Horas</span>
-                  </div>
-                  <span className="text-white/30">:</span>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-bold font-mono">{String(countdown.minutes).padStart(2, "0")}</span>
-                    <span className="text-[10px] text-white/60 uppercase">Min</span>
-                  </div>
-                  <span className="text-white/30">:</span>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-bold font-mono">{String(countdown.seconds).padStart(2, "0")}</span>
-                    <span className="text-[10px] text-white/60 uppercase">Seg</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : videoUrl ? (
-            <div className="absolute inset-0">
-              <ReactPlayer
-                url={videoUrl}
-                width="100%"
-                height="100%"
-                className="absolute inset-0"
-                playing={playerActive}
-                muted
-                controls={showVideoControls}
-                onReady={(player: unknown) => {
-                  const targetSeconds = computeTargetSecondsNow();
-                  // #region agent log
-                  fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "X-Debug-Session-Id": "9b991b",
-                    },
-                    body: JSON.stringify({
-                      sessionId: "9b991b",
-                      runId: "pre-fix",
-                      hypothesisId: "H2_seekReady",
-                      location: "LiveOpsClient.tsx:onReady",
-                      message: "seekTo no onReady do player fixo",
-                      data: {
-                        phase,
-                        targetSeconds,
-                        replayEnabled,
-                        startDate,
-                        startTime,
-                      },
-                      timestamp: Date.now(),
-                    }),
-                  }).catch(() => {});
-                  // #endregion agent log
-                  const p = player as { seekTo: (seconds: number, type?: string) => void };
-                  p.seekTo(targetSeconds, "seconds");
-                  setPlayerActive(true);
-                }}
-                onProgress={({ playedSeconds }: { playedSeconds: number }) => {
-                  setPlayerSeconds(Math.floor(playedSeconds));
-                  setHasPlayerProgress(true);
-                  const playedSecondsInt = Math.floor(playedSeconds);
-                  if (!debugFirstProgressRef.current) {
-                    debugFirstProgressRef.current = true;
-                    // #region agent log
-                    fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "X-Debug-Session-Id": "9b991b",
-                      },
-                      body: JSON.stringify({
-                        sessionId: "9b991b",
-                        runId: "pre-fix",
-                        hypothesisId: "H2_seekReady",
-                        location: "LiveOpsClient.tsx:onProgress:first",
-                        message: "Primeiro onProgress do player",
-                        data: {
-                          phase,
-                          playedSeconds,
-                          playedSecondsInt,
-                          playerActive,
-                          webinarSeconds,
-                        },
-                        timestamp: Date.now(),
-                      }),
-                    }).catch(() => {});
-                    // #endregion agent log
-                  }
-
-                  const bucket = Math.floor(playedSecondsInt / 30);
-                  if (bucket !== debugProgressBucketRef.current && bucket <= 4) {
-                    debugProgressBucketRef.current = bucket;
-                    // #region agent log
-                    fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "X-Debug-Session-Id": "9b991b",
-                      },
-                      body: JSON.stringify({
-                        sessionId: "9b991b",
-                        runId: "pre-fix",
-                        hypothesisId: "H2_seekReady",
-                        location: "LiveOpsClient.tsx:onProgress:bucket",
-                        message: "onProgress bucket (~30s)",
-                        data: {
-                          phase,
-                          bucket,
-                          playedSecondsInt,
-                          webinarSeconds,
-                        },
-                        timestamp: Date.now(),
-                      }),
-                    }).catch(() => {});
-                    // #endregion agent log
-                  }
-                }}
-                config={{
-                  youtube: {
-                    playerVars: {
-                      controls: showVideoControls ? 1 : 0,
-                      rel: 0,
-                      modestbranding: 1,
-                      autoplay: 0,
-                    },
-                  },
-                }}
-              />
-            </div>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 px-3 text-center">
-              <p className="text-xs text-slate-300">Vídeo indisponível</p>
-            </div>
-          )}
-
-          {/* Scarcity overlay */}
-          {showScarcity && config.scarcity.enabled && phase !== "waiting" && (
-            <div className="pointer-events-none absolute top-3 left-3 right-3">
-              <div
-                className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-white text-xs font-bold shadow"
-                style={{ backgroundColor: scarcityComputed.bg }}
-              >
-                <AlertTriangle className="h-4 w-4" />
-                <span className="truncate">{config.scarcity.message}</span>
-                {config.scarcity.count > 0 && (
-                  <span className="bg-black/20 px-2 py-0.5 rounded text-[11px] font-semibold">
-                    {config.scarcity.count} vagas
-                  </span>
-                )}
-                {config.scarcity.timer.enabled && scarcityComputed.remainingSeconds !== null && (
-                  <span className="ml-1 text-[11px] font-mono">
-                    {formatTime(scarcityComputed.remainingSeconds)}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Offer overlay */}
-          {showOffer && config.offer.active && phase !== "waiting" && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2">
-              <a
-                href={config.offer.url || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pointer-events-auto flex items-center justify-center rounded-xl text-xs md:text-sm font-bold text-white shadow-2xl transition-all hover:brightness-110 active:scale-95 h-10 px-3 whitespace-nowrap"
-                style={{ backgroundColor: offerComputed.color }}
-              >
-                {offerComputed.text}
-                {config.offer.colorTimer.enabled && config.offer.colorTimer.showCountdown && offerComputed.remainingSeconds !== null && (
-                  <span className="ml-2 text-white/90 font-mono text-[11px]">
-                    {formatTime(offerComputed.remainingSeconds)}
-                  </span>
-                )}
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Abas internas */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800/70 pb-3">
-          {(
-            [
-              { id: "chat", label: "CHAT", icon: MessageCircle },
-              { id: "offer", label: "OFERTA", icon: PlayCircle },
-              { id: "scarcity", label: "ESCASSEZ", icon: AlertTriangle },
-              { id: "alerts", label: "AVISOS", icon: Timer },
-            ] as const
-          ).map((t) => {
-            const Icon = t.icon;
-            const active = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveTab(t.id)}
-                className={[
-                  "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-widest whitespace-nowrap transition",
-                  active
-                    ? "border-primary bg-primary/15 text-primary"
-                    : "border-slate-800 bg-slate-900/70 text-slate-400 hover:border-slate-700 hover:text-slate-200",
-                ].join(" ")}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          {/* Coluna esquerda: Resumo + Status + Macros */}
-          <div className="space-y-4">
-        <section className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                Webinar
-              </p>
-              <h2 className="mt-1 text-lg font-semibold text-slate-50">{webinarName}</h2>
-              <p className="mt-1 text-xs text-slate-400">
-                Link público:{" "}
-                <span className="font-mono text-[11px] text-slate-300">
-                  /live/{webinarCode}/{webinarSlug}
-                </span>
-              </p>
-            </div>
-            <a
-              href={`/live/${webinarCode}/${webinarSlug}/watch`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-emerald-500/90 px-4 py-2 text-xs font-semibold text-emerald-950 shadow hover:bg-emerald-400"
-            >
-              <PlayCircle className="h-4 w-4" />
-              Abrir player
-            </a>
+    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col overflow-hidden font-sans">
+      
+      {/* Top Bar Mission Control */}
+      <header className="h-20 border-b border-slate-800/60 bg-slate-900/80 backdrop-blur-2xl flex items-center justify-between px-8 shrink-0 z-50">
+        <div className="flex items-center gap-6">
+          <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border transition-all duration-500 ${connected ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10' : 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse'}`}>
+            {connected ? <Wifi className="h-6 w-6" /> : <WifiOff className="h-6 w-6" />}
           </div>
-        </section>
-
-        <section className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
-          <header className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                Status do webinar
-              </p>
-              <p className="text-sm text-slate-300">
-                Controle rápido de DRAFT / SCHEDULED / LIVE / REPLAY / FINISHED.
-              </p>
+          <div>
+            <h1 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-3">
+              Mission Control <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+            </h1>
+            <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <span>{webinarName}</span>
+              <span className="h-1 w-1 rounded-full bg-slate-700" />
+              <span className={connected ? "text-emerald-500" : "text-red-500"}>
+                {connected ? "Sincronizado" : "Desconectado"}
+              </span>
             </div>
-            <button
-              type="button"
-              onClick={() => changeStatus(status)}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-700 px-2 py-1 text-[11px] text-slate-400 hover:border-slate-500"
-            >
-              <RefreshCcw className="h-3 w-3" />
-              Recarregar
-            </button>
-          </header>
+          </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
-            {(
-              [
-                "DRAFT",
-                "SCHEDULED",
-                "LIVE",
-                "REPLAY",
-                "FINISHED",
-              ] as WebinarStatus[]
-            ).map((s) => {
-              const isActive = status === s;
-              const Icon =
-                s === "LIVE"
-                  ? PlayCircle
-                  : s === "SCHEDULED"
-                  ? BarChart2
-                  : s === "REPLAY"
-                  ? SkipForward
-                  : s === "FINISHED"
-                  ? PauseCircle
-                  : PlayCircle;
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end px-4 border-r border-slate-800">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status Atual</span>
+            <span className={`text-xs font-black uppercase ${currentStatus === 'LIVE' ? 'text-red-500' : 'text-primary'}`}>{currentStatus}</span>
+          </div>
+          <a
+            href={`/live/${webinarCode}/${webinarSlug}/watch`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl text-xs font-black transition-all border border-slate-700"
+          >
+            <PlayCircle className="h-4 w-4" /> VER SALA
+          </a>
+        </div>
+      </header>
 
-              return (
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* Sidebar Esquerda: Métricas e Controles de Status */}
+        <aside className="w-80 border-r border-slate-800/60 bg-slate-900/40 flex flex-col shrink-0 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+          
+          {/* Card de Audiência */}
+          <div className="p-5 rounded-3xl bg-slate-950 border border-slate-800/60 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Espectadores</p>
+                <p className="text-2xl font-black text-white tabular-nums">1.248</p>
+              </div>
+            </div>
+            <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+              <div className="h-full bg-primary w-3/4 shadow-[0_0_10px_rgba(124,58,237,0.5)]" />
+            </div>
+            <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase">
+              <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-emerald-500" /> +12%</span>
+              <span>Meta: 2.000</span>
+            </div>
+          </div>
+
+          {/* Controle de Vagas (Escassez) */}
+          <div className="p-5 rounded-3xl bg-slate-950 border border-slate-800/60 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Escassez Real</h3>
+              <button onClick={toggleSpotsVisibility} className={`p-1.5 rounded-lg transition-all ${spots.show ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-800 text-slate-500'}`}>
+                {spots.show ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className="flex items-center justify-center gap-6">
+              <button onClick={() => updateSpots(-1)} className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500/20 transition-all active:scale-90 border border-red-500/20">
+                <Minus className="h-6 w-6" />
+              </button>
+              <div className="text-center">
+                <p className="text-4xl font-black text-white tabular-nums">{spots.count}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase">Vagas</p>
+              </div>
+              <button onClick={() => updateSpots(1)} className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center hover:bg-emerald-500/20 transition-all active:scale-90 border border-emerald-500/20">
+                <Plus className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          {/* Status da Transmissão */}
+          <div className="space-y-3">
+            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Controle de Status</h3>
+            <div className="grid grid-cols-1 gap-2">
+              {(["LIVE", "REPLAY", "FINISHED"] as WebinarStatus[]).map((s) => (
                 <button
                   key={s}
-                  type="button"
-                  disabled={updatingStatus}
                   onClick={() => changeStatus(s)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-[11px] font-medium transition ${
-                    isActive
-                      ? "border-primary bg-primary/15 text-primary"
-                      : "border-slate-800 bg-slate-900/80 text-slate-400 hover:border-slate-600 hover:text-slate-100"
+                  disabled={updatingStatus || currentStatus === s}
+                  className={`flex items-center justify-between px-4 py-3.5 rounded-2xl border text-xs font-black transition-all ${
+                    currentStatus === s
+                      ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
+                      : "bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700 hover:text-slate-300"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{s}</span>
+                  <span className="uppercase tracking-widest">{s}</span>
+                  {currentStatus === s ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-2 w-2 rounded-full bg-slate-700" />}
                 </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="space-y-3 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
-          <header className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                Macros de mensagens
-              </p>
-              <p className="text-sm text-slate-300">
-                Dispare mensagens prontas no chat com um clique.
-              </p>
+              ))}
             </div>
-          </header>
-
-          <div className="space-y-2">
-            {macros.map((macro) => (
-              <button
-                key={macro}
-                type="button"
-                onClick={() => sendMacro(macro)}
-                className="w-full rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-primary hover:bg-primary/10 motion-transition"
-              >
-                {macro}
-              </button>
-            ))}
           </div>
-        </section>
+        </aside>
 
-        <section className="rounded-2xl border border-slate-800/80 bg-slate-950/60 shadow-lg">
-          <PollAdmin webinarId={webinarId} />
-        </section>
-        </div>
+        {/* Área Central: Operação e Chat */}
+        <main className="flex-1 flex flex-col overflow-hidden bg-slate-950 p-6 gap-6">
+          
+          {/* Grid Superior: Macros e Funções */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0">
+            {/* Macros de Pitch */}
+            <section className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800/60 shadow-xl space-y-4">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" /> Macros de Operação
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {macros.map((macro, i) => (
+                  <button
+                    key={macro.id}
+                    onClick={() => sendMacro(macro)}
+                    className="group relative flex flex-col gap-1 p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-primary/50 transition-all text-left"
+                  >
+                    <span className="text-xs font-black text-white uppercase truncate">{macro.label}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Ctrl + {i+1}</span>
+                    {macro.action !== "none" && <div className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
+                  </button>
+                ))}
+              </div>
+            </section>
 
-          {/* Coluna direita: Conteúdo por aba */}
-          <div className="space-y-4">
-            {activeTab === "chat" && (
-              <section className="flex min-h-[340px] flex-col rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
-                <header className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
-                      <MessageCircle className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-50">Chat ao vivo</p>
-                      <p className="text-xs text-slate-400">
-                        Veja, fixe e remova mensagens em tempo real.
-                      </p>
-                    </div>
-                  </div>
-                  {chatEnabled && (
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide motion-transition ${
-                        connected
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                          : "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                      }`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-400 motion-safe:animate-pulse" : "bg-amber-400"}`}
-                      />
-                      {connected ? "SSE ativo" : "Conectando…"}
-                    </span>
-                  )}
-                </header>
+            {/* Funções da Sala */}
+            <section className="p-6 rounded-3xl bg-slate-900/40 border border-slate-800/60 shadow-xl space-y-4">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Settings className="h-4 w-4 text-slate-500" /> Funções da Sala
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: 'ambilight', label: 'Ambilight', icon: Sparkles, active: config.layout.ambilight, color: 'text-primary' },
+                  { id: 'reactions', label: 'Reações', icon: Heart, active: config.reactions.enabled, color: 'text-red-500' },
+                  { id: 'socialProof', label: 'Prova Social', icon: Bell, active: config.socialProof.enabled, color: 'text-amber-500' },
+                  { id: 'chat', label: 'Chat', icon: MessageCircle, active: config.chat.enabled, color: 'text-blue-500' },
+                ].map((fn) => (
+                  <button
+                    key={fn.id}
+                    onClick={() => {
+                      if (fn.id === 'ambilight') updateConfig({ layout: { ...config.layout, ambilight: !config.layout.ambilight } });
+                      if (fn.id === 'reactions') updateConfig({ reactions: { ...config.reactions, enabled: !config.reactions.enabled } });
+                      if (fn.id === 'socialProof') updateConfig({ socialProof: { ...config.socialProof, enabled: !config.socialProof.enabled } });
+                      if (fn.id === 'chat') updateConfig({ chat: { ...config.chat, enabled: !config.chat.enabled } });
+                    }}
+                    className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${
+                      fn.active 
+                        ? "bg-slate-950 border-slate-700 text-white" 
+                        : "bg-slate-900/20 border-transparent text-slate-600"
+                    }`}
+                  >
+                    <fn.icon className={`h-4 w-4 ${fn.active ? fn.color : ''}`} />
+                    <span className="text-xs font-black uppercase tracking-widest">{fn.label}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
 
-                {pinned && (
-                  <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-100">
-                    <div className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest">
-                      <Pin className="h-3 w-3" />
-                      Mensagem fixada
-                    </div>
-                    <p className="font-semibold">{pinned.author}</p>
-                    <p className="mt-1 text-amber-50/90">{pinned.content}</p>
-                  </div>
-                )}
-
-                <div className="flex-1 space-y-2 overflow-y-auto pr-1 pb-28 text-xs">
-                  {loadingChat && (
-                    <p className="text-[11px] text-slate-500">Carregando mensagens...</p>
-                  )}
-                  {messages
-                    .filter((m) => !m.pinned)
-                    .map((m) => (
-                      <div
-                        key={m.id}
-                        className="group rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2"
-                      >
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <p className="text-[11px] font-semibold text-slate-100">{m.author}</p>
-                          <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
-                            <button
-                              type="button"
-                              onClick={() => pinMessage(m.id)}
-                              className="rounded p-1 text-slate-500 hover:text-amber-400"
-                              title="Fixar no player"
-                            >
-                              <Pin className="h-3 w-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteMessage(m.id)}
-                              className="rounded p-1 text-slate-500 hover:text-red-400"
-                              title="Apagar"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-                        <p className="text-[11px] text-slate-200">{m.content}</p>
+          {/* Área Inferior: Chat e Enquetes */}
+          <div className="flex-1 flex gap-6 min-h-0">
+            {/* Chat Master */}
+            <section className="flex-1 flex flex-col rounded-3xl bg-slate-900/40 border border-slate-800/60 shadow-xl overflow-hidden">
+              <div className="p-4 border-b border-slate-800/60 flex items-center justify-between bg-slate-900/60">
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-4 w-4 text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chat Master</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{messages.length} Mensagens</span>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
+                {messages.map((m) => (
+                  <div key={m.id} className={`group flex flex-col gap-1.5 p-4 rounded-2xl transition-all ${m.pinned ? 'bg-primary/10 border border-primary/20' : 'bg-slate-950/50 border border-transparent hover:border-slate-800'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${m.author === 'Equipe' ? 'text-primary' : 'text-slate-500'}`}>{m.author}</span>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="text-slate-600 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                        {!m.pinned && <button className="text-slate-600 hover:text-amber-500"><Pin className="h-3.5 w-3.5" /></button>}
                       </div>
-                    ))}
+                    </div>
+                    <p className="text-xs font-medium text-slate-300 leading-relaxed">{m.content}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-                  {!loadingChat && messages.length === 0 && (
-                    <p className="mt-4 text-center text-[11px] text-slate-500">
-                      Nenhuma mensagem enviada ainda.
-                    </p>
-                  )}
+            {/* Enquetes Live */}
+            <section className="w-96 flex flex-col rounded-3xl bg-slate-900/40 border border-slate-800/60 shadow-xl overflow-hidden">
+              <div className="p-4 border-b border-slate-800/60 bg-slate-900/60">
+                <div className="flex items-center gap-3">
+                  <BarChart2 className="h-4 w-4 text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Enquetes Live</span>
                 </div>
-              </section>
-            )}
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+                <PollAdmin webinarId={webinarId} />
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
 
-            {activeTab === "offer" && (
-              <section className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
-                    <PlayCircle className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-50">Exibição de Oferta</p>
-                    <p className="text-xs text-slate-400">Mostra ou oculta a oferta no player fixo.</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-3">
-                  <div>
-                    <p className="text-xs font-bold text-slate-200">Exibir Oferta</p>
-                    <p className="text-[11px] text-slate-400">Gatilho local (layout do gestor).</p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!config.offer.active}
-                    onClick={() => setShowOffer((v) => !v)}
-                    className={[
-                      "inline-flex h-9 w-16 items-center justify-center rounded-full border text-xs font-bold transition",
-                      showOffer ? "border-primary bg-primary/15 text-primary" : "border-slate-800 bg-slate-900/80 text-slate-400",
-                    ].join(" ")}
-                  >
-                    {showOffer ? "ON" : "OFF"}
-                  </button>
-                </div>
-
-                <p className="mt-3 text-[11px] text-slate-400">
-                  Se `config.offer.active` estiver desativado no webinar, a oferta não será exibida.
-                </p>
-              </section>
-            )}
-
-            {activeTab === "scarcity" && (
-              <section className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">
-                    <AlertTriangle className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-50">Exibição de Escassez</p>
-                    <p className="text-xs text-slate-400">Mostra ou oculta o banner de escassez no player fixo.</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-3">
-                  <div>
-                    <p className="text-xs font-bold text-slate-200">Exibir Escassez</p>
-                    <p className="text-[11px] text-slate-400">Gatilho local (layout do gestor).</p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!config.scarcity.enabled}
-                    onClick={() => setShowScarcity((v) => !v)}
-                    className={[
-                      "inline-flex h-9 w-16 items-center justify-center rounded-full border text-xs font-bold transition",
-                      showScarcity ? "border-amber-500 bg-amber-500/20 text-amber-200" : "border-slate-800 bg-slate-900/80 text-slate-400",
-                    ].join(" ")}
-                  >
-                    {showScarcity ? "ON" : "OFF"}
-                  </button>
-                </div>
-
-                {config.scarcity.timer.enabled && (
-                  <p className="mt-3 text-[11px] text-slate-400">
-                    O banner muda de cor conforme o tempo restante.
-                  </p>
-                )}
-              </section>
-            )}
-
-            {activeTab === "alerts" && (
-              <section className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100/10 text-slate-300">
-                    <Timer className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-50">Controles do Vídeo</p>
-                    <p className="text-xs text-slate-400">Exibe/oculta a barra de controles do player fixo.</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-3">
-                  <div>
-                    <p className="text-xs font-bold text-slate-200">Exibir Controle do Vídeo</p>
-                    <p className="text-[11px] text-slate-400">Atalho para o gestor acompanhar o player.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowVideoControls((v) => !v)}
-                    className={[
-                      "inline-flex h-9 w-16 items-center justify-center rounded-full border text-xs font-bold transition",
-                      showVideoControls ? "border-primary bg-primary/15 text-primary" : "border-slate-800 bg-slate-900/80 text-slate-400",
-                    ].join(" ")}
-                  >
-                    {showVideoControls ? "ON" : "OFF"}
-                  </button>
-                </div>
-              </section>
-            )}
+      {/* Modal de Confirmação Premium */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+          <div className="w-full max-w-md rounded-[40px] border border-slate-800 bg-slate-900 p-10 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-500 border border-amber-500/20 mx-auto">
+              <AlertTriangle className="h-10 w-10" />
+            </div>
+            <h3 className="mb-4 text-2xl font-black text-white text-center uppercase tracking-tight">Ação Crítica</h3>
+            <p className="mb-10 text-sm text-slate-400 text-center leading-relaxed">
+              Você está prestes a mudar o status para <span className="font-black text-white">{confirmAction.next}</span>. 
+              Esta ação é irreversível e afetará todos os espectadores.
+            </p>
+            <div className="flex gap-4">
+              <button onClick={() => setConfirmAction(null)} className="flex-1 rounded-2xl bg-slate-800 py-4 text-xs font-black uppercase tracking-widest text-slate-300 hover:bg-slate-700 transition-all">Cancelar</button>
+              <button onClick={() => changeStatus(confirmAction.next, true)} className="flex-1 rounded-2xl bg-primary py-4 text-xs font-black uppercase tracking-widest text-white hover:brightness-110 transition-all shadow-xl shadow-primary/20">Confirmar</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-
-function formatTime(totalSeconds: number) {
-  const m = Math.floor(totalSeconds / 60);
-  const sec = totalSeconds % 60;
-  return `${m}:${String(sec).padStart(2, "0")}`;
-}
-

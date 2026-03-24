@@ -56,7 +56,16 @@ export type WebinarConfig = {
   };
   chat: { enabled: boolean; mode: "live" | "replay"; readonly: boolean };
   participants: { enabled: boolean; min: number; max: number; autoVariation: boolean };
-  layout: { chatPosition: "right" | "left"; playerSize: "large" | "medium"; bgColor: string };
+  layout: { 
+    chatPosition: "right" | "left"; 
+    playerSize: "large" | "medium"; 
+    bgColor: string;
+    ambilight: boolean; // NOVO: Controle de Ambilight
+  };
+  reactions: {
+    enabled: boolean; // NOVO: Controle de Reações
+    allowUserReactions: boolean;
+  };
   countdown: { enabled: boolean; message: string; showOnCapture: boolean; showOnWatch: boolean };
   offerPopup: {
     enabled: boolean;
@@ -76,6 +85,7 @@ export type WebinarConfig = {
     duration: number;
     position: string;
     fakeNames: string[];
+    fakeCities: string[]; // NOVO: Customização de cidades
   };
   captureCounter: { enabled: boolean; mode: "real" | "fake"; fakeBase: number };
 };
@@ -132,11 +142,28 @@ const defaultConfig: WebinarConfig = {
   },
   chat: { enabled: true, mode: "live", readonly: false },
   participants: { enabled: true, min: 100, max: 500, autoVariation: true },
-  layout: { chatPosition: "right", playerSize: "large", bgColor: "#0F172A" },
+  layout: { 
+    chatPosition: "right", 
+    playerSize: "large", 
+    bgColor: "#0F172A",
+    ambilight: true 
+  },
+  reactions: {
+    enabled: true,
+    allowUserReactions: true
+  },
   countdown: { enabled: true, message: "O webinar começa em:", showOnCapture: true, showOnWatch: true },
   offerPopup: { enabled: false, delayMinutes: 15, image: "", title: "", text: "", buttonText: "", buttonUrl: "", autoCloseSeconds: 0 },
   finished: { message: "Obrigado por participar!", showOfferButton: true, offerText: "Aproveite a oferta!", offerUrl: "" },
-  socialProof: { enabled: false, mode: "fake", frequency: 30, duration: 5, position: "bottom-left", fakeNames: ["Maria S.", "João P.", "Ana R.", "Carlos M.", "Fernanda L."] },
+  socialProof: { 
+    enabled: false, 
+    mode: "fake", 
+    frequency: 30, 
+    duration: 5, 
+    position: "bottom-left", 
+    fakeNames: ["Maria S.", "João P.", "Ana R.", "Carlos M.", "Fernanda L."],
+    fakeCities: ["São Paulo", "Rio de Janeiro", "Belo Horizonte", "Curitiba", "Porto Alegre"]
+  },
   captureCounter: { enabled: true, mode: "fake", fakeBase: 1200 },
 };
 
@@ -163,7 +190,7 @@ export const webinarTemplates: WebinarTemplate[] = [
         subtitle: "Webinar exclusivo e gratuito",
         description: "Descubra como alcançar [resultado] em [prazo] mesmo que você [objeção].",
       },
-      layout: { chatPosition: "right", playerSize: "large", bgColor: "#0D0514" },
+      layout: { ...defaultConfig.layout, chatPosition: "right", playerSize: "large", bgColor: "#0D0514" },
       offer: {
         ...defaultConfig.offer,
         active: true,
@@ -187,7 +214,7 @@ export const webinarTemplates: WebinarTemplate[] = [
         subtitle: "Webinar gratuito com especialista",
         description: "Aprenda métodos comprovados pela ciência para transformar sua saúde.",
       },
-      layout: { chatPosition: "right", playerSize: "large", bgColor: "#f0fdf4" },
+      layout: { ...defaultConfig.layout, chatPosition: "right", playerSize: "large", bgColor: "#f0fdf4" },
       chat: { ...defaultConfig.chat, enabled: true },
     },
   },
@@ -205,7 +232,7 @@ export const webinarTemplates: WebinarTemplate[] = [
         subtitle: "Aula inaugural gratuita",
         description: "Conteúdo prático e direto ao ponto para quem quer resultados reais.",
       },
-      layout: { chatPosition: "right", playerSize: "large", bgColor: "#0f172a" },
+      layout: { ...defaultConfig.layout, chatPosition: "right", playerSize: "large", bgColor: "#0f172a" },
       countdown: { ...defaultConfig.countdown, enabled: true },
     },
   },
@@ -223,7 +250,7 @@ export const webinarTemplates: WebinarTemplate[] = [
         subtitle: "Demo ao vivo exclusiva",
         description: "Veja em primeira mão como esta tecnologia vai mudar sua empresa.",
       },
-      layout: { chatPosition: "right", playerSize: "large", bgColor: "#000000" },
+      layout: { ...defaultConfig.layout, chatPosition: "right", playerSize: "large", bgColor: "#000000" },
       chat: { ...defaultConfig.chat, mode: "live" },
     },
   },

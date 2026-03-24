@@ -131,6 +131,14 @@ model Webinar {
   // Visual Builder (config JSON completo)
   config Json
 
+  // Macros Customizadas
+  macros Json? // [{ id, label, text, action, pin }]
+  
+  // Escassez Dinâmica
+  spotsCount    Int?     @default(0)
+  spotsTotal    Int?     @default(0)
+  showSpots     Boolean  @default(false)
+
   // Relações
   leads        Lead[]
   chatMessages ChatMessage[]

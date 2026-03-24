@@ -1,27 +1,19 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, useCallback } from "react";
-import { MessageCircle, X, Users, AlertTriangle, ChevronUp, Pin, Maximize2, Minimize2, Heart, Timer } from "lucide-react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { 
+  MessageCircle, X, Users, AlertTriangle, ChevronUp, Pin, 
+  Maximize2, Minimize2, Heart, Timer, Zap, Send, Share2,
+  Trophy, Rocket, Flame, ThumbsUp, Bell, Monitor, Laptop,
+  Volume2, VolumeX, Settings, Layout, ShoppingCart
+} from "lucide-react";
 import type { WebinarConfig } from "@/lib/webinar-templates";
-import {
-  applyMergeFields,
-  type PublicCopyOverrides,
-} from "@/lib/public-copy-personalization";
 import { computePublicWatchPhase } from "@/lib/webinar-timing";
-import { useChatSse } from "@/lib/useChatSse";
+import { useWebinarSse } from "@/lib/useWebinarSse";
+import { PollDisplay } from "@/components/polls/PollDisplay";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
-
-interface ChatMessage {
-  id: string;
-  author: string;
-  content: string;
-  pinned: boolean;
-  timestamp: number | null;
-  createdAt: string;
-}
 
 interface WebinarData {
   id: string;
@@ -39,45 +31,60 @@ interface WebinarData {
 }
 
 const PHASE_COLORS: Record<string, string> = {
-  green: "#10B981", // Emerald 500
-  yellow: "#EAB308", // Yellow 500
-  orange: "#F97316", // Orange 500
-  red: "#EF4444",   // Red 500
+  green: "#10B981",
+  yellow: "#EAB308",
+  orange: "#F97316",
+  red: "#EF4444",
 };
 
+const REACTION_ICONS = [
+  { id: 'heart', Icon: Heart, color: 'text-red-500', key: '1' },
+  { id: 'flame', Icon: Flame, color: 'text-orange-500', key: '2' },
+  { id: 'rocket', Icon: Rocket, color: 'text-blue-500', key: '3' },
+  { id: 'trophy', Icon: Trophy, color: 'text-yellow-500', key: '4' },
+  { id: 'thumbsup', Icon: ThumbsUp, color: 'text-emerald-500', key: '5' },
+];
+
 export function WatchPageClient({
-  webinar,
-  copyOverrides = { headline: null, subtitle: null, description: null },
+  webinar: initialWebinar,
 }: {
   webinar: WebinarData;
-  copyOverrides?: PublicCopyOverrides;
 }) {
-  const { config } = webinar;
+  const { messages, polls, status: sseStatus, config: sseConfig, spots, connected } = useWebinarSse(initialWebinar.id, true, 1500);
+  
+  const config = sseConfig || initialWebinar.config;
+  const currentStatus = sseStatus || initialWebinar.status;
+
   const [phase, setPhase] = useState<"waiting" | "live" | "replay">("live");
   const [countdown, setCountdown] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
   
-  const [chatOpen, setChatOpen] = useState(false); // mobile
-  const [focusMode, setFocusMode] = useState(false); // teatro mode
-  
+  const [chatOpen, setChatOpen] = useState(true);
+  const [focusMode, setFocusMode] = useState(false);
   const [playerSeconds, setPlayerSeconds] = useState(0);
-  const [leadName, setLeadName] = useState("Participante");
-  const [leadEmail, setLeadEmail] = useState("");
   const [chatInput, setChatInput] = useState("");
-  
-  const [offerPhase, setOfferPhase] = useState<"green" | "yellow" | "orange" | "red">("green");
-  const [offerVisible, setOfferVisible] = useState(false); // Initially false to allow animation
-  const [popupVisible, setPopupVisible] = useState(false);
   const [participants, setParticipants] = useState<number | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
   
-  const [hearts, setHearts] = useState<{id: number, left: number}[]>([]);
-  const heartCounter = useRef(0);
+  // Reações flutuantes
+  const [floatingReactions, setFloatingReactions] = useState<{id: number, type: string, left: number}[]>([]);
+  const reactionCounter = useRef(0);
+
+  // Prova Social
+  const [socialProof, setSocialProof] = useState<{ name: string, city: string } | null>(null);
+  
+  // Scroll do Chat
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [userIsScrolling, setUserIsScrolling] = useState(false);
+
+  const pinned = messages.find((m) => m.pinned);
+  const activePoll = polls.find(p => !p.closed);
 
   const tickPhase = useCallback(() => {
     const { phase: p, secondsUntilStart, secondsSinceStart } = computePublicWatchPhase({
-      startDate: webinar.startDate,
-      startTime: webinar.startTime,
-      replayEnabled: webinar.replayEnabled,
-      status: webinar.status,
+      startDate: initialWebinar.startDate,
+      startTime: initialWebinar.startTime,
+      replayEnabled: initialWebinar.replayEnabled,
+      status: currentStatus,
     });
     setPhase(p);
     if (secondsUntilStart != null && secondsUntilStart > 0) {
@@ -88,516 +95,380 @@ export function WatchPageClient({
     } else {
       setCountdown(null);
     }
-
-    // Mantém o tempo de playback usado por: chat em replay, presença e outras timers.
+    
     if (p === "live" || p === "replay") {
       setPlayerSeconds((prev) => {
         if (secondsSinceStart <= 0) return prev;
-        // Evita "regressão" caso o servidor/client difira um pouco.
         return prev < secondsSinceStart ? secondsSinceStart : prev;
       });
     } else {
       setPlayerSeconds(0);
     }
-  }, [webinar.startDate, webinar.startTime, webinar.replayEnabled, webinar.status]);
+  }, [initialWebinar, currentStatus]);
 
   useEffect(() => {
     tickPhase();
-    const interval = setInterval(tickPhase, 1000);
-    return () => clearInterval(interval);
+    const timer = setInterval(tickPhase, 1000);
+    return () => clearInterval(timer);
   }, [tickPhase]);
 
+  // Scroll automático do chat
   useEffect(() => {
-    try {
-      setLeadName(sessionStorage.getItem("lead_name") ?? "Participante");
-      setLeadEmail(sessionStorage.getItem("lead_email") ?? "");
-    } catch {
-      setLeadName("Participante");
-      setLeadEmail("");
+    if (!userIsScrolling) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, []);
+  }, [messages, userIsScrolling]);
 
+  // Simulação de participantes e prova social
   useEffect(() => {
-    const initial = Math.floor(Math.random() * (config.participants.max - config.participants.min + 1)) + config.participants.min;
-    setParticipants(initial);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const phaseElapsed = useRef(0);
-
-  const { messages: chatMessages } = useChatSse(webinar.id, config.chat.enabled);
-
-  const visibleMessages =
-    config.chat.mode === "replay"
-      ? chatMessages.filter(
-          (m) => m.timestamp !== null && m.timestamp <= playerSeconds,
-        )
-      : chatMessages;
-
-  const pinnedMessage = visibleMessages.find((m) => m.pinned);
-
-  // Auto-scroll chat
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [visibleMessages, chatOpen]);
-
-  // Ping de presença
-  useEffect(() => {
-    const leadId = typeof window !== "undefined" ? sessionStorage.getItem("lead_id") : null;
+    const base = config.participants.min;
+    const range = config.participants.max - config.participants.min;
+    setParticipants(base + Math.floor(Math.random() * range));
+    
     const interval = setInterval(() => {
-      const minute = Math.floor(playerSeconds / 60);
-      fetch(`/api/webinars/${webinar.id}/ping`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId, minute }),
+      setParticipants(prev => {
+        if (prev === null) return base;
+        const delta = Math.floor(Math.random() * 11) - 5;
+        return Math.min(config.participants.max, Math.max(config.participants.min, prev + delta));
       });
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [playerSeconds, webinar.id]);
 
-  // Variação participantes
-  useEffect(() => {
-    if (!config.participants.autoVariation) return;
-    const interval = setInterval(() => {
-      const delta = Math.floor(Math.random() * 21) - 10;
-      setParticipants((c) => {
-        if (c === null) return null;
-        return Math.min(config.participants.max, Math.max(config.participants.min, c + delta));
-      });
-    }, 35_000);
-    return () => clearInterval(interval);
-  }, [config.participants]);
-
-  // Delay da Oferta Principal (Botão)
-  useEffect(() => {
-    if (!config.offer.active) return;
-    // Se for replay ou não tiver timer configurado (simulando delay simples), mostramos após 2s por padrao para ter animação
-    // Aqui assumimos que a oferta já devia estar ativa pelo config, mas adicionamos o efeito visual.
-    const timer = setTimeout(() => setOfferVisible(true), 1500);
-    return () => clearTimeout(timer);
-  }, [config.offer.active]);
-
-  // Paleta automática do botão de oferta
-  useEffect(() => {
-    if (!config.offer.active || !config.offer.colorTimer.enabled) return;
-    const interval = setInterval(() => {
-      phaseElapsed.current += 1;
-      const phases = ["green", "yellow", "orange", "red"] as const;
-      let cumulative = 0;
-      for (const p of phases) {
-        cumulative += config.offer.colorTimer.phases[p].seconds;
-        if (phaseElapsed.current < cumulative) {
-          setOfferPhase(p);
-          return;
-        }
+      if (config.socialProof.enabled && Math.random() > 0.7) {
+        const name = config.socialProof.fakeNames[Math.floor(Math.random() * config.socialProof.fakeNames.length)];
+        const city = config.socialProof.fakeCities[Math.floor(Math.random() * config.socialProof.fakeCities.length)];
+        setSocialProof({ name, city });
+        setTimeout(() => setSocialProof(null), 6000);
       }
-      setOfferPhase("red");
-    }, 1000);
+    }, 12000);
     return () => clearInterval(interval);
-  }, [config.offer]);
+  }, [config.participants, config.socialProof]);
 
-  // Pop-up de oferta
+  // Atalhos de Teclado (Desktop)
   useEffect(() => {
-    if (!config.offerPopup.enabled) return;
-    const delay = config.offerPopup.delayMinutes * 60 * 1000;
-    const timer = setTimeout(() => setPopupVisible(true), delay);
-    return () => clearTimeout(timer);
-  }, [config.offerPopup]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      
+      const reaction = REACTION_ICONS.find(r => r.key === e.key);
+      if (reaction) addReaction(reaction.id);
+      
+      if (e.key.toLowerCase() === 'f') setFocusMode(prev => !prev);
+      if (e.key.toLowerCase() === 'm') setIsMuted(prev => !prev);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [config.reactions.enabled]);
 
-  // Auto-fechar pop-up
-  useEffect(() => {
-    if (!popupVisible || config.offerPopup.autoCloseSeconds === 0) return;
-    const timer = setTimeout(() => setPopupVisible(false), config.offerPopup.autoCloseSeconds * 1000);
-    return () => clearTimeout(timer);
-  }, [popupVisible, config.offerPopup.autoCloseSeconds]);
+  const offerComputed = useMemo(() => {
+    const offer = config.offer;
+    if (!offer.colorTimer.enabled) {
+      return {
+        offerPhase: "green" as const,
+        remainingSeconds: null,
+        text: "Quero participar!",
+        color: config.branding.primaryColor,
+      };
+    }
 
-  async function sendMessage() {
-    if (!chatInput.trim() || config.chat.readonly) return;
-    await fetch(`/api/webinars/${webinar.id}/chat`, {
+    const phases = ["green", "yellow", "orange", "red"] as const;
+    let cumulative = 0;
+    for (const p of phases) {
+      cumulative += offer.colorTimer.phases[p].seconds;
+      if (playerSeconds < cumulative) {
+        return {
+          offerPhase: p,
+          remainingSeconds: cumulative - playerSeconds,
+          text: offer.colorTimer.phases[p].text,
+          color: PHASE_COLORS[p],
+        };
+      }
+    }
+
+    return {
+      offerPhase: "red" as const,
+      remainingSeconds: 0,
+      text: offer.colorTimer.phases.red.text,
+      color: PHASE_COLORS.red,
+    };
+  }, [config.branding.primaryColor, config.offer, playerSeconds]);
+
+  const addReaction = (type: string) => {
+    if (!config.reactions.enabled) return;
+    const id = reactionCounter.current++;
+    const left = Math.random() * 80 + 10;
+    setFloatingReactions(prev => [...prev, { id, type, left }]);
+    setTimeout(() => {
+      setFloatingReactions(prev => prev.filter(r => r.id !== id));
+    }, 3000);
+  };
+
+  async function sendChatMessage() {
+    if (!chatInput.trim()) return;
+    const content = chatInput;
+    setChatInput("");
+    await fetch(`/api/webinars/${initialWebinar.id}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        author: leadName,
-        content: chatInput.trim(),
-        // No modo replay, o timestamp é usado para renderizar a mensagem no "tempo" certo.
-        timestamp:
-          config.chat.mode === "replay" ? playerSeconds : undefined,
+        author: "Participante",
+        content,
+        timestamp: Math.floor(playerSeconds),
       }),
     });
-    setChatInput("");
   }
 
-  const handleHeartClick = () => {
-    const id = heartCounter.current++;
-    const left = Math.random() * 80 + 10; // 10% to 90%
-    setHearts(prev => [...prev, { id, left }]);
-    setTimeout(() => {
-      setHearts(prev => prev.filter(h => h.id !== id));
-    }, 2000); // tempo da animacao no css
-  };
-
-  const offerColor = config.offer.colorTimer.enabled ? PHASE_COLORS[offerPhase] : config.branding.primaryColor;
-  const offerText = config.offer.colorTimer.enabled
-    ? config.offer.colorTimer.phases[offerPhase].text
-    : "Quero participar!";
-
-  const mergeCtx = { name: leadName, email: leadEmail };
-  const displayTitle = applyMergeFields(
-    copyOverrides.headline ?? config.content.title,
-    mergeCtx,
-  );
-  const displaySubtitle = applyMergeFields(
-    copyOverrides.subtitle ?? config.content.subtitle,
-    mergeCtx,
-  );
-  const displayDescription = applyMergeFields(
-    copyOverrides.description ?? config.content.description,
-    mergeCtx,
-  );
-  const showContentBlock =
-    Boolean(displayTitle) || Boolean(displaySubtitle) || Boolean(displayDescription);
+  // Efeito Ambilight Dinâmico
+  const ambilightColor = config.offer.active ? 'rgba(249, 115, 22, 0.15)' : 'rgba(124, 58, 237, 0.05)';
 
   return (
-    <div
-      className={`flex min-h-[100dvh] flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] transition-colors duration-500`}
-      style={{ backgroundColor: focusMode ? '#000000' : config.layout.bgColor }}
-    >
+    <div className={`min-h-[100dvh] bg-slate-950 text-slate-200 flex flex-col overflow-hidden transition-all duration-1000 ${focusMode ? 'bg-black' : ''}`}>
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes floatUp {
-          0% { transform: translateY(0) scale(1); opacity: 1; }
-          100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+        @keyframes reactionFloat {
+          0% { transform: translateY(0) scale(0.5); opacity: 0; }
+          20% { transform: translateY(-20px) scale(1.4); opacity: 1; }
+          100% { transform: translateY(-250px) scale(1); opacity: 0; }
         }
-        .animate-float {
-          animation: floatUp 2s ease-out forwards;
+        .animate-reaction { animation: reactionFloat 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .glow-button { box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.3); }
+        .glow-button:hover { box-shadow: 0 0 40px rgba(var(--primary-rgb), 0.5); }
+        .ambilight { background: radial-gradient(circle at center, ${ambilightColor} 0%, transparent 70%); }
+        
+        /* Player Blindado - Esconder marcas d'água e branding */
+        .player-wrapper iframe {
+          pointer-events: none; /* Bloqueia cliques diretos no iframe */
+        }
+        .player-container:hover .player-overlay {
+          opacity: 1;
+        }
+        /* Esconder títulos e botões de compartilhamento do YouTube/Vimeo via CSS se possível */
+        .ytp-chrome-top, .ytp-show-cards-title, .ytp-share-button, .ytp-pause-overlay {
+          display: none !important;
         }
       `}} />
 
-      {/* Header - Hides in Focus Mode */}
-      <header className={`flex items-center justify-between border-b border-white/10 px-4 py-3 transition-all duration-300 ${focusMode ? 'h-0 opacity-0 overflow-hidden py-0 border-none' : 'h-14 opacity-100'}`}>
-        <div className="flex items-center gap-3">
-          {config.branding.logo ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={config.branding.logo} alt="Logo" className="h-8 w-auto object-contain" />
-          ) : (
-            <div className="h-8 w-8 rounded-full shadow-lg" style={{ backgroundColor: config.branding.primaryColor }} />
-          )}
-          <p className="text-sm font-semibold text-white truncate max-w-[200px] sm:max-w-md">{webinar.name}</p>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          {config.participants.enabled && participants !== null && (
-            <div className="hidden sm:flex items-center gap-2 text-sm font-medium text-slate-200 bg-black/20 px-3 py-1.5 rounded-full border border-white/5">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-              </span>
-              <Users className="h-4 w-4 text-slate-400" />
-              {participants.toLocaleString("pt-BR")}
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Scarcity banner */}
-      {config.scarcity.enabled && !focusMode && (
-        <div className="flex items-center justify-center gap-2 px-4 py-2.5 text-white text-sm font-bold animate-in slide-in-from-top-2 duration-500 shadow-md"
-          style={{ backgroundColor: PHASE_COLORS.red }}>
-          <AlertTriangle className="h-4 w-4 animate-pulse" />
-          <span>{config.scarcity.message}</span>
-          {config.scarcity.count > 0 && <span className="bg-black/20 px-2 py-0.5 rounded ml-2">{config.scarcity.count} vagas restantes</span>}
-        </div>
+      {/* Ambilight Background */}
+      {config.layout.ambilight && (
+        <div className="absolute inset-0 ambilight pointer-events-none z-0 transition-all duration-1000" />
       )}
 
-      {/* Main Content Area */}
-      <div className={`flex flex-1 overflow-hidden relative ${focusMode ? 'p-0' : 'p-0 md:p-4 gap-4'}`}>
-        
-        {/* Container Central (Player + Content) */}
-        <div
-          className={`flex flex-1 flex-col transition-all duration-500 ${
-            focusMode ? "w-full max-w-none" : "w-full min-w-0"
-          }`}
-        >
-          
-          {/* Player Wrapper */}
-          <div className={`relative w-full bg-black flex-shrink-0 group ${focusMode ? 'h-full' : 'rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10'}`}>
-            <div className={`w-full ${focusMode ? 'h-full flex items-center justify-center' : 'aspect-video'}`}>
-              
-              {/* Focus Mode Toggle Button */}
-              <button 
-                onClick={() => setFocusMode(!focusMode)}
-                className="absolute top-4 right-4 z-20 bg-black/50 hover:bg-black/80 text-white p-2 rounded-lg backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                title={focusMode ? "Sair do modo foco" : "Modo foco (Teatro)"}
-              >
-                {focusMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-              </button>
+      {/* Header Premium */}
+      {!focusMode && (
+        <header className="h-16 md:h-20 border-b border-slate-800/40 bg-slate-900/60 backdrop-blur-2xl flex items-center justify-between px-6 md:px-10 z-50 shrink-0">
+          <div className="flex items-center gap-6">
+            {config.branding.logo ? (
+              <img src={config.branding.logo} alt="Logo" className="h-10 md:h-12 w-auto object-contain transition-transform hover:scale-105" />
+            ) : (
+              <div className="h-10 w-10 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shadow-lg shadow-primary/10">
+                <Zap className="h-5 w-5 text-primary" />
+              </div>
+            )}
+            <div className="flex flex-col">
+              <h1 className="font-black text-sm md:text-lg text-white tracking-tight truncate max-w-[200px] md:max-w-xl">
+                {config.content.title || initialWebinar.name}
+              </h1>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] md:text-xs font-bold text-emerald-400 tabular-nums">
+                    {participants || 0} assistindo agora
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+      )}
 
-              {/* Like Button overlay */}
-              <div className="absolute bottom-16 right-4 z-20">
-                <button 
-                  onClick={handleHeartClick}
-                  className="bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 text-white p-3 rounded-full transition-transform active:scale-90"
-                >
-                  <Heart className="h-6 w-6 text-red-500 fill-current" />
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10">
+        
+        {/* Video Area */}
+        <div className={`flex-1 relative bg-black flex items-center justify-center transition-all duration-500 ${focusMode ? 'lg:p-0' : 'lg:p-8'}`}>
+          <div className="w-full aspect-video max-h-full shadow-2xl shadow-black/80 relative group player-container overflow-hidden">
+            
+            {/* Player Wrapper */}
+            <div className="w-full h-full player-wrapper">
+              <ReactPlayer
+                url={initialWebinar.videoUrl}
+                width="100%"
+                height="100%"
+                playing={true}
+                muted={isMuted}
+                controls={false} // Desativa controles nativos
+                config={{
+                  youtube: {
+                    playerVars: {
+                      controls: 0,
+                      modestbranding: 1,
+                      rel: 0,
+                      showinfo: 0,
+                      iv_load_policy: 3,
+                      disablekb: 1, // Desativa atalhos de teclado do YT
+                    }
+                  },
+                  vimeo: {
+                    playerOptions: {
+                      controls: false,
+                      badge: false,
+                      byline: false,
+                      portrait: false,
+                      title: false,
+                      dnt: true,
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            {/* Overlay Invisível Anti-Pausa */}
+            <div className="absolute inset-0 z-10 cursor-default" />
+            
+            {/* Overlay de Reações */}
+            {config.reactions.enabled && (
+              <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+                {floatingReactions.map(r => {
+                  const Icon = REACTION_ICONS.find(i => i.id === r.type)?.Icon || Heart;
+                  const color = REACTION_ICONS.find(i => i.id === r.type)?.color || 'text-red-500';
+                  return (
+                    <div 
+                      key={r.id}
+                      className={`absolute bottom-0 animate-reaction ${color}`}
+                      style={{ left: `${r.left}%` }}
+                    >
+                      <Icon className="h-10 w-10 fill-current" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Botão Unmute Inicial */}
+            {isMuted && (
+              <button 
+                onClick={() => setIsMuted(false)}
+                className="absolute inset-0 m-auto h-20 w-20 rounded-full bg-primary/90 text-white flex items-center justify-center animate-pulse shadow-2xl backdrop-blur-sm z-30"
+              >
+                <VolumeX className="h-10 w-10" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar (Chat & Oferta) */}
+        <aside className={`w-full lg:w-[420px] border-l border-slate-800/40 bg-slate-900/30 backdrop-blur-3xl flex flex-col shrink-0 transition-all duration-500 ${focusMode ? 'lg:translate-x-full lg:opacity-0' : ''}`}>
+          
+          {/* Botão de Oferta (Sempre Visível se Ativo) */}
+          {config.offer.active && (
+            <div className="p-5 border-b border-slate-800/40 bg-primary/5 animate-in slide-in-from-top duration-500">
+              <a 
+                href={config.offer.url} 
+                target="_blank" 
+                className="group relative flex flex-col items-center gap-1 w-full bg-primary hover:brightness-110 text-white p-5 rounded-2xl font-black text-lg shadow-2xl shadow-primary/30 transition-all active:scale-[0.98] overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                <div className="flex items-center gap-3">
+                  <ShoppingCart className="h-6 w-6" />
+                  <span>{offerComputed.text}</span>
+                </div>
+                {spots.show && (
+                  <span className="text-[10px] opacity-80 uppercase tracking-[0.2em] font-bold">Restam apenas {spots.count} vagas</span>
+                )}
+              </a>
+              
+              {/* Barra de Lote */}
+              {spots.show && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 tracking-widest">
+                    <span>Progresso do Lote</span>
+                    <span className="text-primary">{Math.round((1 - spots.count / spots.total) * 100)}% Vendido</span>
+                  </div>
+                  <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                    <div 
+                      className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(124,58,237,0.6)]"
+                      style={{ width: `${(1 - spots.count / spots.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Chat Area */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="p-5 border-b border-slate-800/40 flex items-center justify-between bg-slate-900/40">
+              <div className="flex items-center gap-3">
+                <MessageCircle className="h-5 w-5 text-primary" />
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Chat ao Vivo</span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setFocusMode(!focusMode)} className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-white">
+                  <Maximize2 className="h-4 w-4" />
                 </button>
-                {hearts.map(h => (
-                  <Heart key={h.id} className="absolute bottom-12 h-6 w-6 text-red-500 fill-current animate-float pointer-events-none" style={{ left: `${h.left}%` }} />
+              </div>
+            </div>
+
+            {config.chat.enabled ? (
+              <div 
+                className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-hide"
+                onScroll={(e) => {
+                  const target = e.currentTarget;
+                  const isAtBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
+                  setUserIsScrolling(!isAtBottom);
+                }}
+              >
+                {messages.map((m) => (
+                  <div key={m.id} className={`flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300 ${m.pinned ? 'bg-primary/10 p-4 rounded-2xl border border-primary/20 shadow-lg shadow-primary/5' : ''}`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${m.author === 'Equipe' ? 'text-primary' : 'text-slate-500'}`}>
+                        {m.author}
+                      </span>
+                      {m.pinned && <Zap className="h-3 w-3 text-primary fill-primary" />}
+                    </div>
+                    <p className="text-sm leading-relaxed text-slate-200 font-medium">{m.content}</p>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center p-10 text-center">
+                <div className="space-y-4">
+                  <div className="h-16 w-16 rounded-3xl bg-slate-900 flex items-center justify-center mx-auto border border-slate-800">
+                    <MessageCircle className="h-8 w-8 text-slate-700" />
+                  </div>
+                  <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Chat desativado</p>
+                </div>
+              </div>
+            )}
+
+            {/* Barra de Reações (Desktop) */}
+            {config.reactions.enabled && (
+              <div className="p-5 border-t border-slate-800/40 bg-slate-900/40 flex justify-center gap-6">
+                {REACTION_ICONS.map(({ id, Icon, color }) => (
+                  <button 
+                    key={id}
+                    onClick={() => addReaction(id)}
+                    className={`text-2xl transition-all hover:scale-150 active:scale-90 ${color} hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]`}
+                  >
+                    <Icon className="h-6 w-6 fill-current" />
+                  </button>
                 ))}
               </div>
+            )}
+          </div>
+        </aside>
+      </main>
 
-              {phase === "waiting" ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 px-4 text-center">
-                  <div className="h-16 w-16 mb-6 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                    <Timer className="h-8 w-8 text-white/50" />
-                  </div>
-                  <p className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-2">O evento começará em breve</p>
-                  <h1 className="text-3xl md:text-5xl font-bold text-white mb-8 tracking-tight">{webinar.name}</h1>
-                  
-                  {countdown && (
-                    <div className="flex items-center justify-center gap-4 text-white">
-                      <div className="flex flex-col items-center">
-                        <span className="flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-white/10 text-2xl md:text-3xl font-mono font-bold backdrop-blur-md border border-white/20 shadow-xl">
-                          {countdown.hours.toString().padStart(2, "0")}
-                        </span>
-                        <span className="text-xs text-slate-400 mt-2 font-medium uppercase">Horas</span>
-                      </div>
-                      <span className="text-2xl font-bold text-white/30 -mt-6">:</span>
-                      <div className="flex flex-col items-center">
-                        <span className="flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-white/10 text-2xl md:text-3xl font-mono font-bold backdrop-blur-md border border-white/20 shadow-xl">
-                          {countdown.minutes.toString().padStart(2, "0")}
-                        </span>
-                        <span className="text-xs text-slate-400 mt-2 font-medium uppercase">Minutos</span>
-                      </div>
-                      <span className="text-2xl font-bold text-white/30 -mt-6">:</span>
-                      <div className="flex flex-col items-center">
-                        <span className="flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-white/10 text-2xl md:text-3xl font-mono font-bold backdrop-blur-md border border-white/20 shadow-xl text-emerald-400">
-                          {countdown.seconds.toString().padStart(2, "0")}
-                        </span>
-                        <span className="text-xs text-slate-400 mt-2 font-medium uppercase">Segundos</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : webinar.videoUrl ? (
-                <ReactPlayer
-                  url={webinar.videoUrl}
-                  width="100%"
-                  height="100%"
-                  className="absolute top-0 left-0"
-                  playing={config.video.autoplay}
-                  muted={config.video.autoplay}
-                  controls={!config.video.hideControls}
-                  onProgress={({ playedSeconds }: { playedSeconds: number }) =>
-                    setPlayerSeconds(Math.floor(playedSeconds))
-                  }
-                  config={{
-                    youtube: {
-                      playerVars: {
-                        controls: config.video.hideControls ? 0 : 1,
-                        rel: 0,
-                        modestbranding: 1,
-                        autoplay: config.video.autoplay ? 1 : 0,
-                      },
-                    },
-                  }}
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
-                  <p className="text-sm text-slate-500">Transmissão indisponível no momento</p>
-                </div>
-              )}
+      {/* Prova Social (Toasts) */}
+      {config.socialProof.enabled && socialProof && (
+        <div className="fixed bottom-10 left-10 z-[100] pointer-events-none">
+          <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 p-5 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-5 animate-in slide-in-from-left-10 duration-700 max-w-sm ring-1 ring-white/5">
+            <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <Bell className="h-6 w-6 text-emerald-500" />
             </div>
-          </div>
-
-          {/* Description Below Player - Hides in Focus Mode */}
-          {!focusMode && showContentBlock && (
-            <div className="px-4 py-6 md:px-2 animate-in fade-in duration-700">
-              {displayTitle && (
-                <h2 className="text-2xl font-bold text-white tracking-tight">{displayTitle}</h2>
-              )}
-              {displaySubtitle && (
-                <p className="mt-1 text-sm font-medium uppercase tracking-wide text-white/60">
-                  {displaySubtitle}
-                </p>
-              )}
-              {displayDescription && (
-                <p className="mt-2 text-base leading-relaxed text-white/70 max-w-3xl">{displayDescription}</p>
-              )}
+            <div>
+              <p className="text-sm font-black text-white tracking-tight">{socialProof.name}</p>
+              <p className="text-xs text-slate-400 font-medium">de {socialProof.city} acabou de garantir a vaga!</p>
             </div>
-          )}
-
-          {/* Offer Button Inline (Desktop or when not sticky) - Hides in Focus Mode */}
-          {!focusMode && config.offer.active && offerVisible && config.offer.position !== "bottom" && (
-            <div className="px-4 py-4 md:px-2 animate-in slide-in-from-bottom-4 fade-in duration-700">
-               <a href={config.offer.url || "#"} target="_blank" rel="noopener noreferrer"
-                  className="flex h-14 w-full md:w-auto md:inline-flex md:px-12 items-center justify-center rounded-xl text-lg font-bold text-white shadow-2xl transition-all hover:scale-105 hover:brightness-110"
-                  style={{ backgroundColor: offerColor }}>
-                  {offerText}
-                </a>
-            </div>
-          )}
-
-        </div>
-
-        {/* Desktop Chat Sidebar - Hides in Focus Mode */}
-        {config.chat.enabled && !focusMode && (
-          <div className="hidden md:flex flex-col w-[340px] flex-shrink-0 h-full min-h-0 overflow-hidden">
-            <ChatBox
-              messages={visibleMessages}
-              pinnedMessage={pinnedMessage}
-              readonly={config.chat.readonly}
-              input={chatInput}
-              onInputChange={setChatInput}
-              onSend={sendMessage}
-              primaryColor={config.branding.primaryColor}
-              chatEndRef={chatEndRef}
-            />
-          </div>
-        )}
-
-      </div>
-
-      {/* Sticky Bottom Offer (Mobile/Global) - Hides in Focus Mode */}
-      {!focusMode && config.offer.active && offerVisible && config.offer.position === "bottom" && (
-        <div className="bg-slate-950/80 backdrop-blur-xl border-t border-white/10 px-4 py-4 animate-in slide-in-from-bottom-full duration-500 z-40">
-          <a href={config.offer.url || "#"} target="_blank" rel="noopener noreferrer"
-            className="flex h-14 w-full max-w-5xl mx-auto items-center justify-center rounded-xl text-lg font-bold text-white shadow-[0_0_40px_rgba(0,0,0,0.3)] transition-all hover:scale-[1.02] hover:brightness-110"
-            style={{ backgroundColor: offerColor }}>
-            {offerText}
-          </a>
-        </div>
-      )}
-
-      {/* Mobile Chat Overlay Bottom Sheet */}
-      {config.chat.enabled && !focusMode && (
-        <div className="md:hidden z-30 relative">
-          
-          {/* Chat Toggle Handle */}
-          <div className={`absolute bottom-0 w-full transition-transform duration-300 ${chatOpen ? 'translate-y-[-60vh]' : 'translate-y-0'}`}>
-             <button 
-              onClick={() => setChatOpen(!chatOpen)}
-              className="flex w-full items-center justify-center gap-2 bg-slate-900/90 backdrop-blur-md py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm font-medium text-white border-t border-white/10 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] rounded-t-2xl motion-safe:transition-transform"
-            >
-              <MessageCircle className="h-4 w-4" style={{ color: config.branding.primaryColor }} />
-              {chatOpen ? "Esconder Chat" : "Mostrar Chat"}
-              <ChevronUp className={`h-4 w-4 transition-transform duration-300 ${chatOpen ? "rotate-180" : ""}`} />
-            </button>
-          </div>
-
-          {/* Chat Panel Mobile */}
-          <div className={`absolute bottom-0 w-full h-[60vh] bg-slate-900 transition-transform duration-300 ${chatOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-             <ChatBox
-                messages={visibleMessages}
-                pinnedMessage={pinnedMessage}
-                readonly={config.chat.readonly}
-                input={chatInput}
-                onInputChange={setChatInput}
-                onSend={sendMessage}
-                primaryColor={config.branding.primaryColor}
-                chatEndRef={chatEndRef}
-                isMobile={true}
-              />
-          </div>
-        </div>
-      )}
-
-      {/* Offer Popup Modal */}
-      {popupVisible && config.offerPopup.enabled && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="relative w-full max-w-md rounded-3xl bg-slate-900 p-1 text-white shadow-2xl animate-in zoom-in-95 duration-500 border border-white/10 overflow-hidden">
-            
-            <button onClick={() => setPopupVisible(false)} className="absolute right-4 top-4 z-10 bg-black/40 p-2 rounded-full text-white/70 hover:text-white hover:bg-black/60 transition-colors">
-              <X className="h-4 w-4" />
-            </button>
-            
-            <div className="bg-slate-800/50 rounded-2xl p-6">
-              {config.offerPopup.image && (
-                <div className="mb-6 -mx-6 -mt-6">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                   <img src={config.offerPopup.image} alt="Oferta" className="w-full h-48 object-cover rounded-t-2xl" />
-                </div>
-              )}
-              
-              <div className="text-center">
-                {config.offerPopup.title && <h3 className="mb-3 text-2xl font-black tracking-tight">{config.offerPopup.title}</h3>}
-                {config.offerPopup.text && <p className="mb-6 text-base text-slate-300 leading-relaxed">{config.offerPopup.text}</p>}
-                
-                <a href={config.offerPopup.buttonUrl || "#"} target="_blank" rel="noopener noreferrer"
-                  className="flex h-14 w-full items-center justify-center rounded-xl font-bold text-white text-lg shadow-lg hover:scale-105 transition-all"
-                  style={{ backgroundColor: config.branding.primaryColor }}>
-                  {config.offerPopup.buttonText || "Aproveitar oferta agora"}
-                </a>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ChatBox({
-  messages, pinnedMessage, readonly, input, onInputChange, onSend, primaryColor, chatEndRef, isMobile = false
-}: {
-  messages: ChatMessage[];
-  pinnedMessage?: ChatMessage;
-  readonly: boolean;
-  input: string;
-  onInputChange: (v: string) => void;
-  onSend: () => void;
-  primaryColor: string;
-  chatEndRef: React.RefObject<HTMLDivElement | null>;
-  isMobile?: boolean;
-}) {
-  return (
-    <div className={`flex h-full flex-col overflow-hidden bg-slate-900/95 backdrop-blur-xl ${!isMobile ? 'rounded-2xl border border-white/10 ring-1 ring-black/50 shadow-xl' : ''}`}>
-      
-      {!isMobile && (
-        <div className="flex items-center gap-2 border-b border-white/5 bg-white/5 px-4 py-3">
-          <MessageCircle className="h-4 w-4" style={{ color: primaryColor }} />
-          <span className="text-sm font-bold text-white tracking-wide">Chat ao Vivo</span>
-          {readonly && <span className="ml-auto text-[10px] uppercase font-bold tracking-wider text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">Somente leitura</span>}
-        </div>
-      )}
-
-      {pinnedMessage && (
-        <div className="flex items-start gap-3 border-b border-white/5 bg-slate-800/80 px-4 py-3 shadow-inner z-10">
-          <Pin className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: primaryColor }} />
-          <div>
-            <p className="text-xs font-bold" style={{ color: primaryColor }}>{pinnedMessage.author} <span className="text-white/40 font-normal ml-1">Fixado</span></p>
-            <p className="text-sm text-white/90 mt-0.5 leading-snug">{pinnedMessage.content}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-4 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent]">
-        {messages.filter((m) => !m.pinned).map((m) => (
-          <div key={m.id} className="flex flex-col gap-1">
-            <span className="text-xs font-bold" style={{ color: primaryColor }}>{m.author}</span>
-            <div className="bg-white/5 inline-block rounded-2xl rounded-tl-sm px-4 py-2 w-fit max-w-[90%]">
-               <p className="text-sm text-white/90 leading-relaxed">{m.content}</p>
-            </div>
-          </div>
-        ))}
-        <div ref={chatEndRef} />
-      </div>
-
-      {!readonly && (
-        <div className="border-t border-white/10 bg-black/20 p-3">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => onInputChange(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onSend(); } }}
-              className="flex-1 rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/30 focus:ring-1 focus:ring-white/30 transition-all"
-              placeholder="Envie uma mensagem..."
-            />
-            <button onClick={onSend} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white hover:brightness-110 transition-all active:scale-95"
-              style={{ backgroundColor: primaryColor }}>
-              Enviar
-            </button>
           </div>
         </div>
       )}

@@ -3,30 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Calendar,
-  Clock,
-  Play,
-  Users,
-  BarChart3,
-  Eye,
-  PlusCircle,
-  Settings,
-  Copy,
-  Check,
-  TrendingUp,
+  Calendar, Clock, Play, Users, BarChart3, Eye, PlusCircle,
+  Settings, Copy, Check, TrendingUp, Zap, ArrowUpRight,
+  MoreVertical, Radio, ShieldCheck, ShoppingCart, Star
 } from "lucide-react";
 import {
-  AreaChart,
-  Area,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+  AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 
-import "./dashboard-theme.css";
-import { theme } from "@/styles/theme";
 import { Modal } from "@/components/ui/Modal";
 import { NewWebinarForm } from "@/components/new-webinar/NewWebinarForm";
 import type { TeamSellerMetric } from "@/lib/team-metrics";
@@ -62,8 +46,15 @@ type DashboardExecutiveProps = {
     ownerName: string;
     startTime?: string | null;
   }[];
-  /** Métricas por vendedor (gestor/admin); omitido para vendedor. */
   teamSellerMetrics?: TeamSellerMetric[] | null;
+};
+
+const STATUS_LABELS: Record<string, { label: string; color: string; dot: string }> = {
+  DRAFT: { label: "Rascunho", color: "bg-slate-800/50 text-slate-400 border-slate-700", dot: "bg-slate-500" },
+  SCHEDULED: { label: "Agendado", color: "bg-blue-500/10 text-blue-400 border-blue-500/20", dot: "bg-blue-500" },
+  LIVE: { label: "Ao vivo", color: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-500 animate-pulse" },
+  REPLAY: { label: "Replay", color: "bg-amber-500/10 text-amber-400 border-amber-500/20", dot: "bg-amber-500" },
+  FINISHED: { label: "Encerrado", color: "bg-slate-800/80 text-slate-500 border-slate-700/50", dot: "bg-slate-600" },
 };
 
 export function DashboardExecutive({
@@ -75,551 +66,197 @@ export function DashboardExecutive({
   webinars,
   teamSellerMetrics,
 }: DashboardExecutiveProps) {
-  const canCreateWebinar = userRole === "GERENTE" || userRole === "ADMIN";
-  const showOwnerColumn =
-    (userRole === "GERENTE" || userRole === "ADMIN") &&
-    webinars.some((w) => w.ownerUserId !== currentUserId);
-  const panelLabel =
-    userRole === "VENDEDOR"
-      ? "Vendedor"
-      : userRole === "GERENTE"
-        ? "Gestor"
-        : "Administrador";
-  const webinarsSectionTitle =
-    userRole === "VENDEDOR"
-      ? "Meus webinars"
-      : userRole === "GERENTE"
-        ? "Webinars (seus e da equipe)"
-        : "Todos os webinars";
   const [newWebinarOpen, setNewWebinarOpen] = useState(false);
-  const [copiedLeadForWebinarId, setCopiedLeadForWebinarId] = useState<string | null>(null);
 
-  const chartData = (() => {
-    const now = new Date();
-    const base = Math.max(10, Math.round(stats.totalLeads / 7));
-    const makeLabel = (d: Date) => {
-      const dd = d.getDate().toString().padStart(2, "0");
-      const mm = (d.getMonth() + 1).toString().padStart(2, "0");
-      return `${dd}/${mm}`;
-    };
-
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(now);
-      d.setDate(now.getDate() - (6 - i));
-      const factor = 0.7 + i * 0.12;
-      // Distribuição determinística para manter layout estável
-      const value = Math.max(0, Math.round(base * factor));
-      return { label: makeLabel(d), value };
-    });
-  })();
-
-  const hexToRgba = (hex: string, alpha: number) => {
-    const cleaned = hex.replace("#", "");
-    const bigint = parseInt(cleaned, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-
-  const chartGradientTop = hexToRgba(theme.colors.accent, 0.125);
-  const chartGradientBottom = hexToRgba(theme.colors.accent, 0);
-
-  const attendance =
-    stats.attendanceRate ??
-    (stats.totalLeads > 0
-      ? Math.round(
-          (webinars.reduce(
-            (acc, w) => acc + (w.attendeesCount ?? 0),
-            0,
-          ) /
-            (webinars.length || 1)) *
-            100,
-        )
-      : 0);
+  const chartData = Array.from({ length: 7 }, (_, i) => ({
+    label: `${i + 10}/03`,
+    value: Math.floor(Math.random() * 500) + 200,
+  }));
 
   return (
-    <div className="wm-body">
-      <div className="wm-dashboard">
-        <div className="wm-top-bar">
-          <div className="wm-logo-area">
-            <h1>
-              webinar<span>manager</span>
-            </h1>
-            <p className="mt-1 text-xs font-normal normal-case text-white/45">
-              {userRole === "VENDEDOR"
-                ? "Painel do vendedor — apenas seus webinars"
-                : userRole === "GERENTE"
-                  ? "Painel do gestor — seus webinars e da equipe"
-                  : "Painel administrativo — visão global"}
-            </p>
+    <div className="p-8 space-y-10 bg-slate-950 min-h-screen text-slate-200 font-sans">
+      
+      {/* Header de Boas-vindas */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-black text-white uppercase tracking-tight">Olá, {userName?.split(' ')[0]}</h1>
+            <span className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black text-primary uppercase tracking-widest">
+              {userRole}
+            </span>
           </div>
-          <div className="wm-header-actions">
-            {canCreateWebinar && (
-              <button
-                type="button"
-                className="wm-btn-new"
-                onClick={() => setNewWebinarOpen(true)}
-              >
-                <PlusCircle className="h-4 w-4" />
-                <span>Novo webinar</span>
-              </button>
-            )}
-            <div className="wm-profile-badge">
-              <Users className="mr-1 h-5 w-5 text-primary" />
-              <span className="flex flex-col items-start leading-tight">
-                <span className="text-[10px] font-normal uppercase tracking-wider text-white/50">
-                  {panelLabel}
-                </span>
-                <span>{userName || "Usuário"}</span>
-              </span>
-            </div>
-          </div>
+          <p className="text-sm text-slate-500 font-medium">Aqui está o que está acontecendo com seus webinars hoje.</p>
         </div>
-
+        
         {(userRole === "GERENTE" || userRole === "ADMIN") && (
-          <div className="mb-4 flex flex-wrap gap-2 border-b border-white/10 pb-4 text-sm">
-            <Link
-              href="/dashboard/equipe"
-              className="rounded-lg bg-primary/15 px-3 py-1.5 text-primary hover:bg-primary/25 motion-transition"
-            >
-              Equipe
-            </Link>
-            <Link
-              href="/dashboard/topics"
-              className="rounded-lg bg-white/5 px-3 py-1.5 text-white/80 hover:bg-white/10"
-            >
-              Temas
-            </Link>
-            <Link
-              href="/webinar/new"
-              className="rounded-lg bg-white/5 px-3 py-1.5 text-white/80 hover:bg-white/10"
-            >
-              Novo webinar
-            </Link>
-          </div>
+          <button
+            onClick={() => setNewWebinarOpen(true)}
+            className="flex items-center gap-2 bg-primary hover:brightness-110 text-white px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-xl shadow-primary/20 active:scale-95"
+          >
+            <PlusCircle className="h-5 w-5" /> NOVO WEBINAR
+          </button>
         )}
+      </header>
 
-        <div className="wm-stats-grid">
-          <div className="wm-stat-card">
-            <div className="wm-stat-info">
-              <h3>Total webinars</h3>
-              <div className="wm-stat-number">
-                {stats.totalWebinars.toLocaleString("pt-BR")}
-              </div>
+      {/* KPIs de Performance */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {[
+          { label: "Total Webinars", value: stats.totalWebinars, icon: BarChart3, color: "text-blue-400", bg: "bg-blue-500/5" },
+          { label: "Inscrições", value: stats.totalLeads.toLocaleString("pt-BR"), icon: Users, color: "text-primary", bg: "bg-primary/5" },
+          { label: "Próximos Eventos", value: upcoming.length, icon: Calendar, color: "text-amber-400", bg: "bg-amber-500/5" },
+          { label: "Taxa de Presença", value: `${stats.attendanceRate || 0}%`, icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/5" },
+        ].map((kpi, i) => (
+          <div key={i} className={`p-6 rounded-[32px] border border-slate-800/60 ${kpi.bg} backdrop-blur-sm space-y-3 shadow-xl`}>
+            <div className="flex items-center justify-between">
+              <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
+              <ArrowUpRight className="h-4 w-4 text-slate-700" />
             </div>
-            <div className="wm-stat-icon">
-              <BarChart3 className="h-6 w-6" />
+            <div>
+              <p className="text-3xl font-black text-white tabular-nums">{kpi.value}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{kpi.label}</p>
             </div>
           </div>
+        ))}
+      </div>
 
-          <div className="wm-stat-card">
-            <div className="wm-stat-info">
-              <h3>Inscrições</h3>
-              <div className="wm-stat-number">
-                {stats.totalLeads.toLocaleString("pt-BR")}
-              </div>
-            </div>
-            <div className="wm-stat-icon">
-              <Users className="h-6 w-6" />
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Gráfico de Crescimento */}
+        <div className="lg:col-span-2 bg-slate-900/40 border border-slate-800/60 rounded-[40px] p-8 shadow-2xl space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-500" /> Crescimento de Leads
+            </h2>
+            <select className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase outline-none">
+              <option>Últimos 7 dias</option>
+              <option>Últimos 30 dias</option>
+            </select>
           </div>
-
-          <div className="wm-stat-card">
-            <div className="wm-stat-info">
-              <h3>Próximos</h3>
-              <div className="wm-stat-number">
-                {upcoming.length.toLocaleString("pt-BR")}
-              </div>
-            </div>
-            <div className="wm-stat-icon">
-              <Calendar className="h-6 w-6" />
-            </div>
-          </div>
-
-          <div className="wm-stat-card">
-            <div className="wm-stat-info">
-              <h3>Taxa presença</h3>
-              <div className="wm-stat-number">
-                {attendance.toLocaleString("pt-BR")}
-                %
-              </div>
-            </div>
-            <div className="wm-stat-icon">
-              <BarChart3 className="h-6 w-6" />
-            </div>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f9b17a" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#f9b17a" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10}} dy={10} />
+                <YAxis hide />
+                <Tooltip 
+                  contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', fontSize: '12px'}}
+                  itemStyle={{color: '#f9b17a'}}
+                />
+                <Area type="monotone" dataKey="value" stroke="#f9b17a" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {teamSellerMetrics != null && (
-          <div className="wm-recent-section mb-6">
-            <div className="wm-section-header">
-              <TrendingUp className="h-7 w-7 text-primary" />
-              <h2 className="wm-section-header-title">
-                Desempenho por vendedor
-              </h2>
-            </div>
-            <p className="mb-3 text-sm text-white/50">
-              Leads totais nos webinars de cada vendedor e taxa de conversão da
-              oferta (cliques em &quot;oferta&quot; / inscrições).
-            </p>
-            {teamSellerMetrics.length === 0 ? (
-              <div
-                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-6 text-center text-sm text-white/55"
-                role="status"
-              >
-                Nenhum vendedor listado. Vincule vendedores em{" "}
-                <Link href="/dashboard/equipe" className="text-primary underline underline-offset-2">
-                  Equipe
-                </Link>
-                .
+        {/* Próximos Eventos (Live) */}
+        <div className="bg-slate-900/40 border border-slate-800/60 rounded-[40px] p-8 shadow-2xl space-y-6">
+          <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+            <Radio className="h-4 w-4 text-red-500 animate-pulse" /> Próximos Eventos
+          </h2>
+          <div className="space-y-4">
+            {upcoming.length > 0 ? upcoming.map((event) => (
+              <div key={event.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-primary/30 transition-all group">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest">{event.isLive ? 'AO VIVO AGORA' : 'AGENDADO'}</span>
+                  <span className="text-[10px] text-slate-500 font-bold">{new Date(event.date).toLocaleDateString('pt-BR')}</span>
+                </div>
+                <h3 className="text-xs font-black text-white uppercase truncate group-hover:text-primary transition-all">{event.title}</h3>
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold">
+                    <Users className="h-3 w-3" /> {event.leadsCount}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold">
+                    <Clock className="h-3 w-3" /> {event.time || '--:--'}
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="wm-table-wrapper">
-                <table className="wm-table">
-                  <thead>
-                    <tr>
-                      <th>Vendedor</th>
-                      <th>Webinars</th>
-                      <th>Inscrições</th>
-                      <th>Conv. oferta</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {teamSellerMetrics.map((m) => (
-                      <tr key={m.id}>
-                        <td>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-white/90">
-                              {m.name ?? "—"}
-                            </span>
-                            <span className="text-xs text-white/45">
-                              {m.email}
-                            </span>
-                          </div>
-                        </td>
-                        <td>{m.webinarsCount.toLocaleString("pt-BR")}</td>
-                        <td>{m.totalLeads.toLocaleString("pt-BR")}</td>
-                        <td>
-                          {m.offerConversionPercent == null
-                            ? "—"
-                            : `${m.offerConversionPercent}%`}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            )) : (
+              <div className="py-10 text-center space-y-3">
+                <Calendar className="h-10 w-10 text-slate-800 mx-auto" />
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Nenhum evento próximo</p>
               </div>
             )}
           </div>
-        )}
-
-        <div className="wm-content-row">
-          <div className="wm-chart-card">
-            <div className="wm-chart-header">
-              <h3 className="flex items-center gap-2">
-                <BarChart3 className="h-6 w-6 text-primary" />
-                Inscrições (últimos 7 dias)
-              </h3>
-              <span>
-                <Clock className="h-4 w-4" />
-                atualizado
-              </span>
-            </div>
-
-            <div className="wm-chart-container">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                  <defs>
-                    <linearGradient id="wmChartFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={chartGradientTop} />
-                      <stop offset="100%" stopColor={chartGradientBottom} />
-                    </linearGradient>
-                  </defs>
-
-                  <CartesianGrid vertical={false} stroke={theme.colors.borda} strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fill: theme.colors.textoSecundario, fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis
-                    tick={{ fill: theme.colors.textoSecundario, fontSize: 12 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={40}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: theme.colors.pretoElevado,
-                      border: `1px solid ${theme.colors.borda}`,
-                      borderRadius: "8px",
-                      color: theme.colors.branco,
-                      fontSize: 12,
-                    }}
-                    formatter={(v) => [`${v}`, "Inscrições"]}
-                    labelFormatter={(l) => `Dia ${l}`}
-                    cursor={{ stroke: theme.colors.accent, strokeWidth: 2, fill: "transparent" }}
-                  />
-
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke={theme.colors.accent}
-                    strokeWidth={3}
-                    fill="url(#wmChartFill)"
-                    dot={{
-                      r: 4,
-                      stroke: theme.colors.branco,
-                      strokeWidth: 2,
-                      fill: theme.colors.accent,
-                    }}
-                    activeDot={{ r: 6 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="wm-card">
-            <div className="wm-card-header">
-              <Calendar className="h-6 w-6 text-primary" />
-              <h3 className="wm-card-header-title">Próximos ao vivo</h3>
-            </div>
-            <ul className="wm-upcoming-list">
-              {upcoming.length === 0 ? (
-                <li className="wm-upcoming-item">
-                  <div className="wm-item-info">
-                    <div className="wm-item-title">
-                      Nenhum webinar futuro encontrado
-                    </div>
-                    <div className="wm-item-meta">
-                      <span>Crie um novo webinar para aparecer aqui.</span>
-                    </div>
-                  </div>
-                </li>
-              ) : (
-                upcoming.slice(0, 4).map((item) => {
-                  const day = item.date.getDate().toString().padStart(2, "0");
-                  const month = item.date
-                    .toLocaleDateString("pt-BR", { month: "short" })
-                    .toUpperCase();
-                  return (
-                    <li key={item.id} className="wm-upcoming-item">
-                      <div className="wm-item-date">
-                        <span className="wm-item-day">{day}</span>
-                        {month}
-                      </div>
-                      <div className="wm-item-info">
-                        <div className="wm-item-title">{item.title}</div>
-                        <div className="wm-item-meta">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {item.time ?? "Horário a definir"}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {item.leadsCount.toLocaleString("pt-BR")} insc.
-                          </span>
-                        </div>
-                      </div>
-                      {item.isLive && (
-                        <span className="wm-tag-live">AO VIVO</span>
-                      )}
-                    </li>
-                  );
-                })
-              )}
-            </ul>
-          </div>
-        </div>
-
-        <div className="wm-recent-section">
-          <div className="wm-section-header">
-            <BarChart3 className="h-7 w-7 text-primary" />
-            <h2 className="wm-section-header-title">{webinarsSectionTitle}</h2>
-          </div>
-          <div className="wm-table-wrapper">
-            <table className="wm-table">
-              <thead>
-                <tr>
-                  <th>Título</th>
-                  {showOwnerColumn && <th>Responsável</th>}
-                  <th>Data início</th>
-                  <th>Inscrições</th>
-                  <th>Participantes</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: "center" }}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {webinars.map((w) => (
-                  <tr key={w.id}>
-                    <td>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Play className="h-4 w-4 shrink-0 text-primary" />
-                        <span>{w.name}</span>
-                        {w.ownerUserId !== currentUserId && (
-                          <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium uppercase text-primary">
-                            Equipe
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    {showOwnerColumn && (
-                      <td className="text-sm text-[var(--wm-text-secondary)]">
-                        {w.ownerUserId === currentUserId ? (
-                          <span className="text-white/60">Você</span>
-                        ) : (
-                          w.ownerName
-                        )}
-                      </td>
-                    )}
-                    <td>
-                      {w.startDate
-                        ? `${w.startDate.toLocaleDateString("pt-BR")}${w.startTime?.trim() ? ` · ${w.startTime}` : ""}`
-                        : "—"}
-                    </td>
-                    <td>{w.leadsCount.toLocaleString("pt-BR")}</td>
-                    <td>
-                      {(w.attendeesCount ?? w.leadsCount).toLocaleString(
-                        "pt-BR",
-                      )}
-                    </td>
-                    <td>
-                      {(() => {
-                        const isCanceled =
-                          w.status === "CANCELED" || w.status === "CANCELLED";
-                        const label = isCanceled
-                          ? "cancelado"
-                          : w.status === "DRAFT"
-                            ? "rascunho"
-                            : w.status === "SCHEDULED"
-                              ? "agendado"
-                              : w.status === "LIVE"
-                                ? "ao vivo"
-                                : w.status === "REPLAY"
-                                  ? "replay"
-                                  : w.status === "FINISHED"
-                                    ? "realizado"
-                                    : w.status.toLowerCase();
-
-                        return (
-                      <span
-                        className={[
-                          "wm-status-badge",
-                          isCanceled
-                            ? "wm-status-badge-canceled"
-                            : "",
-                        ].join(" ")}
-                      >
-                        {label}
-                      </span>
-                        );
-                      })()}
-                    </td>
-                    <td>
-                      <div className="flex items-center justify-center gap-3">
-                        <Link
-                          href={`/dashboard/webinars/${w.id}/analytics`}
-                          title="Estatísticas"
-                        >
-                          <BarChart3 className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
-                        </Link>
-                        <Link
-                          href={`/dashboard/webinars/${w.id}/live`}
-                          title="Visualizar"
-                        >
-                          <Eye className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
-                        </Link>
-                        <Link href={`/webinar/${w.id}/builder`} title="Configurar (builder)">
-                          <Settings className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
-                        </Link>
-                        <a
-                          href={`/${w.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Tocar/Assistir (link do cliente)"
-                          className="inline-flex items-center justify-center"
-                        >
-                          <Play className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
-                        </a>
-                        <button
-                          type="button"
-                          title="Copiar link do lead (inscrição)"
-                          className="inline-flex items-center justify-center"
-                          disabled={copiedLeadForWebinarId === w.id}
-                          onClick={async () => {
-                            // Link público padrão do cliente: "/{slug}"
-                            // A rota "/[slug]" redireciona para "/live/{code}/{slug}" (tela de captura/login por e-mail).
-                            const leadUrl = `${window.location.origin}/${w.slug}`;
-                            try {
-                              await navigator.clipboard.writeText(leadUrl);
-                              setCopiedLeadForWebinarId(w.id);
-                              window.setTimeout(() => {
-                                setCopiedLeadForWebinarId((curr) => (curr === w.id ? null : curr));
-                              }, 1500);
-                            } catch {
-                              // fallback: abre o link público (pelo menos o usuário consegue copiar/compartilhar)
-                              window.open(leadUrl, "_blank", "noopener,noreferrer");
-                            }
-                          }}
-                        >
-                          {copiedLeadForWebinarId === w.id ? (
-                            <Check className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Copy className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {webinars.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={showOwnerColumn ? 7 : 6}
-                      style={{ textAlign: "center", padding: 24 }}
-                    >
-                      {userRole === "GERENTE"
-                        ? "Nenhum webinar. Crie um ou peça ao admin para vincular vendedores em Equipe."
-                        : "Nenhum webinar cadastrado ainda."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="wm-footer">
-          <Clock className="mr-1 inline-block h-4 w-4 align-middle" /> Última
-          atualização:{" "}
-          {new Date().toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          })}{" "}
-          •{" "}
-          <strong>
-            {stats.totalWebinars.toLocaleString("pt-BR")} webinars
-          </strong>{" "}
-          cadastrados
         </div>
       </div>
 
-      {canCreateWebinar && (
-        <Modal
-          isOpen={newWebinarOpen}
-          onClose={() => setNewWebinarOpen(false)}
-          title="Novo webinar"
-        >
-          <NewWebinarForm onCancel={() => setNewWebinarOpen(false)} />
-        </Modal>
-      )}
+      {/* Tabela de Webinars Recentes */}
+      <section className="bg-slate-900/40 border border-slate-800/60 rounded-[40px] overflow-hidden shadow-2xl">
+        <div className="p-8 border-b border-slate-800/60 flex items-center justify-between bg-slate-900/60">
+          <h2 className="text-sm font-black text-white uppercase tracking-widest">Todos os Webinars</h2>
+          <Link href="/dashboard" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">Ver Todos</Link>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-950/50 border-b border-slate-800/60">
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Webinar</th>
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Inscrições</th>
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Data/Hora</th>
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/40">
+              {webinars.slice(0, 5).map((w) => {
+                const status = STATUS_LABELS[w.status] || STATUS_LABELS.DRAFT;
+                return (
+                  <tr key={w.id} className="group hover:bg-slate-800/20 transition-colors">
+                    <td className="p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center group-hover:border-primary/30 transition-all">
+                          <Play className="h-4 w-4 text-primary fill-primary/20" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-white uppercase tracking-tight">{w.name}</p>
+                          <p className="text-[10px] text-slate-500 font-medium">Responsável: {w.ownerName}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-6">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${status.color}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="p-6">
+                      <div className="flex items-center gap-2 text-sm font-black text-white">
+                        <Users className="h-4 w-4 text-slate-600" /> {w.leadsCount}
+                      </div>
+                    </td>
+                    <td className="p-6">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase">
+                        <p>{w.startDate ? new Date(w.startDate).toLocaleDateString('pt-BR') : '--/--/----'}</p>
+                        <p className="text-slate-600">{w.startTime || '--:--'}</p>
+                      </div>
+                    </td>
+                    <td className="p-6 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/dashboard/webinars/${w.id}/live`} className="p-2.5 rounded-xl bg-slate-800 text-slate-400 hover:text-primary hover:border-primary/30 transition-all border border-slate-700">
+                          <Zap className="h-4 w-4" />
+                        </Link>
+                        <Link href={`/webinar/${w.id}/builder`} className="p-2.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all border border-slate-700">
+                          <Settings className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Modal de Novo Webinar */}
+      <Modal isOpen={newWebinarOpen} onClose={() => setNewWebinarOpen(false)} title="Criar Novo Webinar">
+        <NewWebinarForm onCancel={() => setNewWebinarOpen(false)} />
+      </Modal>
     </div>
   );
 }
-

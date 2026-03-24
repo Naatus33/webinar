@@ -46,6 +46,7 @@ export default async function BuilderPage({ params }: BuilderPageProps) {
       regCtaText: true,
       regSponsors: true,
       config: true,
+      macros: true,
       userId: true,
     },
   });
@@ -86,6 +87,7 @@ export default async function BuilderPage({ params }: BuilderPageProps) {
         regCtaText: webinarPublic.regCtaText,
         regSponsors: (webinarPublic.regSponsors as { name: string; logoUrl: string }[]) ?? [],
         config: webinarPublic.config as WebinarConfig,
+        macros: (webinarPublic.macros as any[]) ?? [],
       }}
     />
   );

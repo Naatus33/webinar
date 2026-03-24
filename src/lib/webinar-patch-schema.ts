@@ -23,6 +23,10 @@ export const webinarPatchSchema = z
     regCtaText: z.union([z.string(), z.null()]).optional(),
     regSponsors: z.unknown().optional(),
     config: z.unknown().optional(),
+    macros: z.unknown().optional(),
+    spotsCount: z.number().optional(),
+    spotsTotal: z.number().optional(),
+    showSpots: z.boolean().optional(),
     status: z.enum(["DRAFT", "SCHEDULED", "LIVE", "REPLAY", "FINISHED"]).optional(),
   })
   .strict();
