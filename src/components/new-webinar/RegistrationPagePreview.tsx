@@ -248,7 +248,7 @@ export function RegistrationPagePreview({
                   }}
                   rows={3}
                   autoFocus
-                  className="w-full resize-none rounded-md bg-slate-900/30 px-2 py-1 text-xs sm:text-sm text-white/90 outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-violet-500/60"
+                  className="w-full resize-none rounded-md bg-slate-900/30 px-2 py-1 text-xs sm:text-sm text-white/90 outline-none ring-1 ring-white/10 focus:ring-2 focus:ring-primary/60"
                 />
               </div>
             ) : (
@@ -400,7 +400,7 @@ export function RegistrationPagePreview({
                   }
                 }}
                 autoFocus
-                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs sm:text-sm font-bold text-slate-800 outline-none ring-violet-500 focus:ring-2"
+                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs sm:text-sm font-bold text-slate-800 outline-none ring-primary focus:ring-2"
               />
             </div>
           ) : (
@@ -447,7 +447,7 @@ export function RegistrationPagePreview({
                   }
                 }}
                 autoFocus
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-slate-800 outline-none ring-violet-500 focus:ring-2"
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-slate-800 outline-none ring-primary focus:ring-2"
               />
             </div>
           ) : (

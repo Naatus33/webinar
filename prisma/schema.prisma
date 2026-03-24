@@ -30,6 +30,8 @@ model User {
   webinars      Webinar[]
   topics        Topic[]
   resetTokens   PasswordResetToken[]
+  /// Preferências de conta (tema, densidade UI, marca padrão para novos webinars, etc.) — JSON validado na aplicação
+  preferences   Json?
   createdAt     DateTime            @default(now())
 
   @@index([managerId])
@@ -162,6 +164,8 @@ model Lead {
   watchedPercent Int      @default(0)
   clickedOffer   Boolean  @default(false)
   lgpdConsent    Boolean  @default(false)
+  /// Lembrete 1h antes enviado (evita duplicatas se o cron correr várias vezes)
+  reminderEmailSentAt DateTime?
   createdAt      DateTime @default(now())
 
   @@index([webinarId])

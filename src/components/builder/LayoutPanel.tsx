@@ -28,7 +28,7 @@ export function LayoutPanel() {
                 onClick={() => updateConfig("layout", { chatPosition: pos })}
                 className={`flex-1 rounded-md border py-2 text-sm ${
                   layout.chatPosition === pos
-                    ? "border-violet-500 bg-violet-600/20 text-violet-300"
+                    ? "border-primary bg-primary/15 text-primary"
                     : "border-slate-700 text-slate-400 hover:border-slate-500"
                 }`}
               >
@@ -49,7 +49,7 @@ export function LayoutPanel() {
                 onClick={() => updateConfig("layout", { playerSize: size })}
                 className={`flex-1 rounded-md border py-2 text-sm ${
                   layout.playerSize === size
-                    ? "border-violet-500 bg-violet-600/20 text-violet-300"
+                    ? "border-primary bg-primary/15 text-primary"
                     : "border-slate-700 text-slate-400 hover:border-slate-500"
                 }`}
               >

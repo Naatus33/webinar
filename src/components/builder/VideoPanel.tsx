@@ -12,7 +12,7 @@ function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; o
       <button
         type="button"
         onClick={onToggle}
-        className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-violet-600" : "bg-slate-700"}`}
+        className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-slate-700"}`}
       >
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
       </button>

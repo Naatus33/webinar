@@ -17,7 +17,7 @@ function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
       type="button"
       onClick={onToggle}
       className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${
-        enabled ? "bg-violet-600" : "bg-slate-700"
+        enabled ? "bg-primary" : "bg-slate-700"
       }`}
     >
       <span
@@ -61,7 +61,7 @@ export function AdvancedSettingsTab({
               type="url"
               value={redirectUrl}
               onChange={(e) => onChange("redirectUrl", e.target.value)}
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2"
+              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2"
               placeholder="https://seusite.com/obrigado"
             />
           )}
@@ -81,7 +81,7 @@ export function AdvancedSettingsTab({
               type="text"
               value={password}
               onChange={(e) => onChange("password", e.target.value)}
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2"
+              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2"
               placeholder="Senha de acesso"
             />
           )}
@@ -110,7 +110,7 @@ export function AdvancedSettingsTab({
               value={lgpdText}
               onChange={(e) => onChange("lgpdText", e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2 resize-none"
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2 resize-none"
               placeholder="Ao se inscrever, você concorda com nossa Política de Privacidade e aceita receber comunicações por e-mail."
             />
           )}

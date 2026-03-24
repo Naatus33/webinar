@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   PlayCircle,
+  Settings,
   Tag,
   Users,
 } from "lucide-react";
@@ -15,6 +16,11 @@ const navItems = [
     href: "/dashboard",
     label: "Início",
     icon: LayoutDashboard,
+  },
+  {
+    href: "/dashboard/settings",
+    label: "Conta",
+    icon: Settings,
   },
   {
     href: "/dashboard/equipe",
@@ -37,34 +43,14 @@ const navItems = [
 ];
 
 export function AppSidebar() {
-  // #region agent log
-  fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "47a313",
-    },
-    body: JSON.stringify({
-      sessionId: "47a313",
-      runId: "pre-fix",
-      hypothesisId: "H1",
-      location: "AppSidebar.tsx:27",
-      message: "AppSidebar render start",
-      data: {},
-      // eslint-disable-next-line react-hooks/purity
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion agent log
-
   const pathname = usePathname();
   const { data } = useSession();
   const role = (data?.user as { role?: string } | undefined)?.role ?? "VENDEDOR";
 
   return (
-    <aside className="hidden border-r border-sidebar-border/60 bg-sidebar/80 px-4 py-6 backdrop-blur-xl md:flex md:w-64 md:flex-col">
+    <aside className="hidden border-r border-sidebar-border/60 bg-sidebar/90 px-4 py-6 backdrop-blur-xl md:flex md:w-64 md:flex-col">
       <div className="mb-8 flex items-center gap-3">
-        <div className="h-9 w-9 rounded-2xl bg-gradient-to-tr from-violet-500 to-indigo-500 shadow-[0_0_30px_rgba(94,92,255,0.7)]" />
+        <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-primary to-[#424769] shadow-[0_8px_28px_rgba(249,177,122,0.35)]" />
         <div>
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/70">
             WebinarPro
@@ -97,8 +83,8 @@ export function AppSidebar() {
               className={[
                 "group flex items-center gap-2 rounded-xl px-3 py-2 transition-colors",
                 active
-                  ? "bg-gradient-to-r from-violet-600/90 to-indigo-600/90 text-sidebar-primary-foreground shadow-[0_10px_30px_rgba(79,70,229,0.55)]"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
+                  ? "bg-primary text-primary-foreground shadow-[0_10px_28px_rgba(249,177,122,0.35)] motion-safe:transition-transform motion-safe:hover:translate-x-0.5"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground motion-transition",
               ].join(" ")}
             >
               <Icon
@@ -123,9 +109,9 @@ export function AppSidebar() {
           </p>
         )}
         {(role === "GERENTE" || role === "ADMIN") && (
-          <p className="rounded-lg border border-violet-500/20 bg-violet-950/20 px-2 py-2 text-[10px] leading-snug text-violet-200/80">
-            <strong className="text-violet-200">Gestor/Admin:</strong> vincule vendedores em{" "}
-            <Link href="/dashboard/equipe" className="underline hover:text-violet-100">
+          <p className="rounded-lg border border-primary/25 bg-primary/10 px-2 py-2 text-[10px] leading-snug text-foreground/90">
+            <strong className="text-primary">Gestor/Admin:</strong> vincule vendedores em{" "}
+            <Link href="/dashboard/equipe" className="underline hover:text-primary">
               Equipe
             </Link>
             .

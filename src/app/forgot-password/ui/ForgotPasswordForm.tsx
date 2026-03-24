@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+const inputClass =
+  "h-10 w-full rounded-xl border border-border/80 bg-background/50 px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground transition motion-transition focus:border-primary focus:ring-2 focus:ring-primary/35";
+
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -31,7 +34,7 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <p className="text-sm text-slate-200">
+      <p className="text-sm text-foreground">
         Se existir uma conta com esse e-mail, enviamos um link de redefinição
         de senha.
       </p>
@@ -41,7 +44,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1">
-        <label className="block text-xs font-medium text-slate-200">
+        <label className="block text-xs font-medium text-foreground">
           E-mail
         </label>
         <input
@@ -49,7 +52,7 @@ export function ForgotPasswordForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="h-10 w-full rounded-xl border border-slate-700/70 bg-slate-950/40 px-3 text-sm text-slate-50 outline-none placeholder:text-slate-500 transition focus:border-violet-400/80 focus:ring-2 focus:ring-violet-500/70"
+          className={inputClass}
           placeholder="voce@empresa.com"
         />
       </div>
@@ -63,11 +66,10 @@ export function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="flex h-10 w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-sm font-medium text-white shadow-[0_10px_30px_rgba(79,70,229,0.6)] transition hover:brightness-110 disabled:opacity-60"
+        className="flex h-10 w-full items-center justify-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_10px_28px_rgba(249,177,122,0.35)] transition motion-safe:hover:brightness-110 disabled:opacity-60"
       >
         {loading ? "Enviando..." : "Enviar link"}
       </button>
     </form>
   );
 }
-

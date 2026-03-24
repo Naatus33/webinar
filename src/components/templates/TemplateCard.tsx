@@ -14,10 +14,10 @@ export function TemplateCard({ template, selected, onSelect }: TemplateCardProps
     <button
       type="button"
       onClick={() => onSelect(template.id)}
-      className={`relative flex flex-col overflow-hidden rounded-xl border-2 text-left transition-all hover:scale-[1.02] ${
+      className={`relative flex flex-col overflow-hidden rounded-xl border-2 text-left motion-safe:transition-all motion-safe:hover:scale-[1.02] ${
         selected
-          ? "border-violet-500 ring-2 ring-violet-500/40"
-          : "border-slate-700 hover:border-slate-500"
+          ? "border-primary ring-2 ring-primary/40"
+          : "border-border hover:border-muted-foreground/50"
       }`}
     >
       {/* Preview visual */}
@@ -42,17 +42,17 @@ export function TemplateCard({ template, selected, onSelect }: TemplateCardProps
       </div>
 
       {/* Info */}
-      <div className="flex flex-col gap-1 bg-slate-900 p-3">
+      <div className="flex flex-col gap-1 bg-card p-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-sm font-semibold text-slate-50">{template.name}</p>
-            <span className="inline-block rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+            <p className="text-sm font-semibold text-foreground">{template.name}</p>
+            <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
               {template.niche}
             </span>
           </div>
-          {selected && <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-violet-400" />}
+          {selected && <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />}
         </div>
-        <p className="text-xs text-slate-500 leading-relaxed">{template.description}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">{template.description}</p>
       </div>
     </button>
   );

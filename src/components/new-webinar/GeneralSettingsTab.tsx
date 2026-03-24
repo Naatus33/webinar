@@ -96,7 +96,7 @@ export function GeneralSettingsTab({
             type="text"
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2"
+            className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2"
             placeholder="Ex: Como dobrar suas vendas em 30 dias"
           />
         </div>
@@ -123,7 +123,7 @@ export function GeneralSettingsTab({
                 type="text"
                 value={slug}
                 onChange={(e) => onChangeSlug(toSlug(e.target.value))}
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 pr-8 pl-3 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2"
+                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 pr-8 pl-3 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2"
                 placeholder="meu-webinar"
               />
               <span className="absolute right-2.5 top-2.5">
@@ -155,7 +155,7 @@ export function GeneralSettingsTab({
             type="button"
             onClick={() => onChangeNativeStreaming(!useNativeStreaming)}
             className={`relative h-5 w-9 rounded-full transition-colors ${
-              useNativeStreaming ? "bg-violet-600" : "bg-slate-700"
+              useNativeStreaming ? "bg-primary" : "bg-muted"
             }`}
           >
             <span
@@ -176,7 +176,7 @@ export function GeneralSettingsTab({
               type="url"
               value={videoUrl}
               onChange={(e) => onChangeVideoUrl(e.target.value)}
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2"
+              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2"
               placeholder="https://youtube.com/watch?v=..."
             />
           </div>
@@ -190,7 +190,7 @@ export function GeneralSettingsTab({
               type="date"
               value={startDate}
               onChange={(e) => onChangeStartDate(e.target.value)}
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2"
+              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
             />
           </div>
           <div className="space-y-1.5">
@@ -199,7 +199,7 @@ export function GeneralSettingsTab({
               type="time"
               value={startTime}
               onChange={(e) => onChangeStartTime(e.target.value)}
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2"
+              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
             />
           </div>
         </div>

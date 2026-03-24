@@ -9,7 +9,7 @@ function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; o
         <p className="text-sm font-medium text-slate-200">{label}</p>
         {description && <p className="text-xs text-slate-500">{description}</p>}
       </div>
-      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-violet-600" : "bg-slate-700"}`}>
+      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-slate-700"}`}>
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
       </button>
     </div>
@@ -37,7 +37,7 @@ export function SocialProofPanel() {
               <div className="flex gap-2">
                 {(["real", "fake"] as const).map((m) => (
                   <button key={m} type="button" onClick={() => updateConfig("socialProof", { mode: m })}
-                    className={`flex-1 rounded-md border py-2 text-sm ${socialProof.mode === m ? "border-violet-500 bg-violet-600/20 text-violet-300" : "border-slate-700 text-slate-400 hover:border-slate-500"}`}>
+                    className={`flex-1 rounded-md border py-2 text-sm ${socialProof.mode === m ? "border-primary bg-primary/15 text-primary" : "border-slate-700 text-slate-400 hover:border-slate-500"}`}>
                     {m === "real" ? "Real (banco de dados)" : "Simulado"}
                   </button>
                 ))}
@@ -60,7 +60,7 @@ export function SocialProofPanel() {
                 <label className="block text-xs font-medium text-slate-400">Nomes simulados (um por linha)</label>
                 <textarea rows={3} value={socialProof.fakeNames.join("\n")}
                   onChange={(e) => updateConfig("socialProof", { fakeNames: e.target.value.split("\n").filter(Boolean) })}
-                  className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2 resize-none" />
+                  className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-primary focus:ring-2 resize-none" />
               </div>
             )}
           </>
@@ -75,7 +75,7 @@ export function SocialProofPanel() {
             <div className="flex gap-2">
               {(["real", "fake"] as const).map((m) => (
                 <button key={m} type="button" onClick={() => updateConfig("captureCounter", { mode: m })}
-                  className={`flex-1 rounded-md border py-2 text-sm ${captureCounter.mode === m ? "border-violet-500 bg-violet-600/20 text-violet-300" : "border-slate-700 text-slate-400 hover:border-slate-500"}`}>
+                  className={`flex-1 rounded-md border py-2 text-sm ${captureCounter.mode === m ? "border-primary bg-primary/15 text-primary" : "border-slate-700 text-slate-400 hover:border-slate-500"}`}>
                   {m === "real" ? "Real" : "Simulado"}
                 </button>
               ))}
@@ -84,7 +84,7 @@ export function SocialProofPanel() {
               <div className="space-y-1.5">
                 <label className="block text-xs font-medium text-slate-400">Base simulada</label>
                 <input type="number" min={0} value={captureCounter.fakeBase} onChange={(e) => updateConfig("captureCounter", { fakeBase: parseInt(e.target.value) || 0 })}
-                  className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2" />
+                  className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2" />
               </div>
             )}
           </>

@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
 import { webinarWhereForUser } from "@/lib/webinar-access";
+import { getTeamSellerMetrics } from "@/lib/team-metrics";
+import { DashboardShell } from "@/components/layout/DashboardShell";
+
 import { DashboardExecutive } from "./ui/DashboardExecutive";
 
 export default async function DashboardPage() {
@@ -47,43 +50,48 @@ export default async function DashboardPage() {
   // Assim o usuário consegue ver os webinars "criados" mesmo antes de agendar/entrar ao vivo.
   const tableWebinars = webinars;
 
+  const teamSellerMetrics = await getTeamSellerMetrics(user);
+
   return (
-    <div className="min-h-screen bg-[var(--color-preto)] text-[var(--color-branco)]">
-      <DashboardExecutive
-        userRole={user.role}
-        currentUserId={user.id}
-        userName={session.user.name ?? session.user.email}
-        stats={{
-          totalWebinars,
-          totalLeads,
-          activeWebinars,
-          attendanceRate: null,
-        }}
-        upcoming={webinars
-          .filter((w) => w.status === "SCHEDULED" || w.status === "LIVE")
-          .slice(0, 8)
-          .map((w) => ({
+    <DashboardShell>
+      <main className="flex-1 overflow-auto">
+        <DashboardExecutive
+          userRole={user.role}
+          currentUserId={user.id}
+          userName={session.user.name ?? session.user.email}
+          stats={{
+            totalWebinars,
+            totalLeads,
+            activeWebinars,
+            attendanceRate: null,
+          }}
+          upcoming={webinars
+            .filter((w) => w.status === "SCHEDULED" || w.status === "LIVE")
+            .slice(0, 8)
+            .map((w) => ({
+              id: w.id,
+              title: w.name,
+              date: w.startDate ?? w.createdAt,
+              time: w.startTime,
+              leadsCount: w._count.leads,
+              isLive: w.status === "LIVE",
+            }))}
+          webinars={tableWebinars.map((w) => ({
             id: w.id,
-            title: w.name,
-            date: w.startDate ?? w.createdAt,
-            time: w.startTime,
+            name: w.name,
+            startDate: w.startDate,
             leadsCount: w._count.leads,
-            isLive: w.status === "LIVE",
+            attendeesCount: null,
+            status: w.status,
+            code: w.code,
+            slug: w.slug,
+            ownerUserId: w.userId,
+            ownerName: w.user.name ?? w.user.email,
+            startTime: w.startTime,
           }))}
-        webinars={tableWebinars.map((w) => ({
-          id: w.id,
-          name: w.name,
-          startDate: w.startDate,
-          leadsCount: w._count.leads,
-          attendeesCount: null,
-          status: w.status,
-          code: w.code,
-          slug: w.slug,
-          ownerUserId: w.userId,
-          ownerName: w.user.name ?? w.user.email,
-          startTime: w.startTime,
-        }))}
-      />
-    </div>
+          teamSellerMetrics={teamSellerMetrics ?? undefined}
+        />
+      </main>
+    </DashboardShell>
   );
 }

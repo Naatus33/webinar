@@ -1,14 +1,21 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Evita que o Turbopack use C:\Users\...\package-lock.json como raiz (aviso de múltiplos lockfiles).
+// App em `webinar/`; com Yarn workspaces o `next` fica em `../node_modules`, então a raiz do Turbopack é o monorepo.
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = path.join(projectRoot, "..");
 
 const nextConfig: NextConfig = {
   turbopack: {
-    root: projectRoot,
+    root: workspaceRoot,
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  telemetry: false,
+});

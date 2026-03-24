@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
@@ -126,6 +126,23 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
     setStep("form");
   }
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { preferences?: { lastWebinarTemplateId?: string | null } } | null) => {
+        if (cancelled || !d?.preferences?.lastWebinarTemplateId) return;
+        const id = d.preferences.lastWebinarTemplateId;
+        if (typeof id === "string" && id.trim() && getTemplateById(id)) {
+          setTemplateId(id);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function handleCreate() {
     if (!generalValid) {
       setActiveTab("general");
@@ -167,6 +184,7 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
         regCtaText,
         regSponsors,
         config: configWithCapturePosition,
+        templateId,
       }),
     });
 
@@ -184,13 +202,13 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
 
   if (step === "template") {
     return (
-      <div className="min-h-screen bg-slate-950 px-6 py-10">
+      <div className="min-h-screen bg-background px-6 py-10">
         <div className="mx-auto max-w-5xl space-y-8">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onCancel}
-              className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground motion-transition"
             >
               <ArrowLeft className="h-4 w-4" /> Dashboard
             </button>
@@ -202,14 +220,14 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
             <button
               type="button"
               onClick={onCancel}
-              className="flex h-10 items-center rounded-md border border-slate-700 px-5 text-sm text-slate-300 hover:bg-slate-800"
+              className="flex h-10 items-center rounded-md border border-border px-5 text-sm text-muted-foreground hover:bg-muted motion-transition"
             >
               Cancelar
             </button>
             <button
               type="button"
               onClick={handleContinueWithTemplate}
-              className="flex h-10 items-center rounded-md bg-violet-600 px-5 text-sm font-medium text-white hover:bg-violet-500"
+              className="flex h-10 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground shadow-[0_8px_24px_rgba(249,177,122,0.25)] hover:brightness-110 motion-transition"
             >
               Continuar
             </button>
@@ -220,7 +238,7 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950">
+    <div className="flex h-screen overflow-hidden bg-background">
       <NewWebinarSidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -229,23 +247,23 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between border-b border-slate-800 px-6 py-3">
+        <header className="flex items-center justify-between border-b border-border px-6 py-3">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setStep("template")}
-              className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-200"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground motion-transition"
             >
               <ArrowLeft className="h-4 w-4" /> Templates
             </button>
-            <span className="text-slate-700">/</span>
-            <span className="text-sm text-slate-300">Novo Webinar</span>
+            <span className="text-border">/</span>
+            <span className="text-sm text-foreground/90">Novo Webinar</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onCancel}
-              className="flex h-8 items-center rounded-md border border-slate-700 px-4 text-sm text-slate-300 hover:bg-slate-800"
+              className="flex h-8 items-center rounded-md border border-border px-4 text-sm text-muted-foreground hover:bg-muted motion-transition"
             >
               Cancelar
             </button>
@@ -253,7 +271,7 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
               type="button"
               onClick={handleCreate}
               disabled={saving || !generalValid}
-              className="flex h-8 items-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-60"
+              className="flex h-8 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_6px_20px_rgba(249,177,122,0.25)] hover:brightness-110 disabled:opacity-60 motion-transition"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {saving ? "Criando..." : "Criar Webinar"}

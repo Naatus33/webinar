@@ -1,6 +1,8 @@
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendReminderEmail } from "@/lib/emails";
+import { log } from "@/lib/logger";
 
 // Chamado por cron a cada hora (ou por Vercel Cron)
 export async function GET(request: Request) {
@@ -29,7 +31,10 @@ export async function GET(request: Request) {
       slug: true,
       startDate: true,
       startTime: true,
-      leads: { select: { id: true, name: true, email: true } },
+      leads: {
+        where: { reminderEmailSentAt: null },
+        select: { id: true, name: true, email: true },
+      },
     },
   });
 
@@ -39,18 +44,28 @@ export async function GET(request: Request) {
   for (const webinar of webinars) {
     for (const lead of webinar.leads) {
       try {
-        await sendReminderEmail({
+        const ok = await sendReminderEmail({
           to: lead.email,
           name: lead.name,
           webinarName: webinar.name,
           watchUrl: `${baseUrl}/live/${webinar.code}/${webinar.slug}/watch`,
         });
-        sent++;
+        if (ok) {
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { reminderEmailSentAt: new Date() },
+          });
+          sent++;
+        } else {
+          log.warn("cron.reminder_skipped_no_email_provider", { webinarId: webinar.id, leadId: lead.id });
+        }
       } catch (err) {
-        console.error("[cron/reminder] Erro ao enviar e-mail:", err);
+        log.error("cron.reminder_send_failed", { webinarId: webinar.id, leadId: lead.id });
+        Sentry.captureException(err);
       }
     }
   }
 
+  log.info("cron.reminder_done", { webinarsProcessed: webinars.length, emailsSent: sent });
   return NextResponse.json({ ok: true, webinarsProcessed: webinars.length, emailsSent: sent });
 }

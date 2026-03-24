@@ -62,14 +62,14 @@ export function SocialProofPopup({ config, webinarId }: SocialProofPopupProps) {
 
   return (
     <div
-      className={`fixed ${positionClass} z-50 flex animate-fade-in items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 shadow-2xl ring-1 ring-white/10`}
+      className={`fixed ${positionClass} z-50 flex animate-fade-in items-center gap-3 rounded-xl border border-border/60 bg-card/95 px-4 py-3 text-foreground shadow-2xl backdrop-blur-sm ring-1 ring-border/40`}
     >
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-violet-700">
-        <User className="h-4 w-4 text-white" />
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <User className="h-4 w-4" />
       </div>
       <div>
-        <p className="text-xs font-semibold text-white">{currentName}</p>
-        <p className="text-[10px] text-slate-400">acabou de se inscrever ✓</p>
+        <p className="text-xs font-semibold">{currentName}</p>
+        <p className="text-[10px] text-muted-foreground">acabou de se inscrever ✓</p>
       </div>
     </div>
   );

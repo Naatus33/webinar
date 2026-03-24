@@ -1,5 +1,7 @@
 ## Webinar Manager — papéis
 
+Análise funcional completa (criação, funil público, permissões): [docs/ANALISE_FUNCIONAL.md](docs/ANALISE_FUNCIONAL.md).
+
 - **Admin:** vê todos os webinars; em **Equipe** (`/dashboard/equipe`) vincula cada **vendedor** a um **gestor**.
 - **Gestor:** vê e opera webinars próprios e da equipe (builder, live, analytics).
 - **Vendedor:** apenas os próprios webinars.

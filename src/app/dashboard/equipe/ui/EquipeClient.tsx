@@ -92,8 +92,8 @@ export function EquipeClient({ role }: { role: Role }) {
   if (role === "GERENTE") {
     return (
       <div className="space-y-6">
-        <div className="rounded-xl border border-violet-500/20 bg-violet-950/20 px-4 py-3 text-sm text-violet-200/90">
-          <strong className="text-violet-100">Sua equipe</strong> — vendedores vinculados a você aparecem aqui.
+        <div className="rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm text-foreground/90">
+          <strong className="text-primary">Sua equipe</strong> — vendedores vinculados a você aparecem aqui.
           Peça ao administrador para atribuir vendedores ao seu perfil.
         </div>
         {teamMembers.length === 0 ? (
@@ -113,7 +113,7 @@ export function EquipeClient({ role }: { role: Role }) {
                   <span>{m._count.webinars} webinar(s)</span>
                   <Link
                     href="/dashboard"
-                    className="text-violet-400 hover:text-violet-300"
+                    className="text-primary hover:underline"
                   >
                     Ver no painel →
                   </Link>

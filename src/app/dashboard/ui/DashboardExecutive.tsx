@@ -13,6 +13,7 @@ import {
   Settings,
   Copy,
   Check,
+  TrendingUp,
 } from "lucide-react";
 import {
   AreaChart,
@@ -28,6 +29,7 @@ import "./dashboard-theme.css";
 import { theme } from "@/styles/theme";
 import { Modal } from "@/components/ui/Modal";
 import { NewWebinarForm } from "@/components/new-webinar/NewWebinarForm";
+import type { TeamSellerMetric } from "@/lib/team-metrics";
 
 type DashboardExecutiveProps = {
   userRole: "ADMIN" | "GERENTE" | "VENDEDOR";
@@ -60,6 +62,8 @@ type DashboardExecutiveProps = {
     ownerName: string;
     startTime?: string | null;
   }[];
+  /** Métricas por vendedor (gestor/admin); omitido para vendedor. */
+  teamSellerMetrics?: TeamSellerMetric[] | null;
 };
 
 export function DashboardExecutive({
@@ -69,6 +73,7 @@ export function DashboardExecutive({
   stats,
   upcoming,
   webinars,
+  teamSellerMetrics,
 }: DashboardExecutiveProps) {
   const canCreateWebinar = userRole === "GERENTE" || userRole === "ADMIN";
   const showOwnerColumn =
@@ -117,8 +122,8 @@ export function DashboardExecutive({
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
-  const chartGradientTop = hexToRgba(theme.colors.vermelho, 0.125);
-  const chartGradientBottom = hexToRgba(theme.colors.vermelho, 0);
+  const chartGradientTop = hexToRgba(theme.colors.accent, 0.125);
+  const chartGradientBottom = hexToRgba(theme.colors.accent, 0);
 
   const attendance =
     stats.attendanceRate ??
@@ -161,7 +166,7 @@ export function DashboardExecutive({
               </button>
             )}
             <div className="wm-profile-badge">
-              <Users className="mr-1 h-5 w-5 text-[var(--color-vermelho)]" />
+              <Users className="mr-1 h-5 w-5 text-primary" />
               <span className="flex flex-col items-start leading-tight">
                 <span className="text-[10px] font-normal uppercase tracking-wider text-white/50">
                   {panelLabel}
@@ -176,7 +181,7 @@ export function DashboardExecutive({
           <div className="mb-4 flex flex-wrap gap-2 border-b border-white/10 pb-4 text-sm">
             <Link
               href="/dashboard/equipe"
-              className="rounded-lg bg-violet-600/20 px-3 py-1.5 text-violet-200 hover:bg-violet-600/30"
+              className="rounded-lg bg-primary/15 px-3 py-1.5 text-primary hover:bg-primary/25 motion-transition"
             >
               Equipe
             </Link>
@@ -246,11 +251,74 @@ export function DashboardExecutive({
           </div>
         </div>
 
+        {teamSellerMetrics != null && (
+          <div className="wm-recent-section mb-6">
+            <div className="wm-section-header">
+              <TrendingUp className="h-7 w-7 text-primary" />
+              <h2 className="wm-section-header-title">
+                Desempenho por vendedor
+              </h2>
+            </div>
+            <p className="mb-3 text-sm text-white/50">
+              Leads totais nos webinars de cada vendedor e taxa de conversão da
+              oferta (cliques em &quot;oferta&quot; / inscrições).
+            </p>
+            {teamSellerMetrics.length === 0 ? (
+              <div
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-6 text-center text-sm text-white/55"
+                role="status"
+              >
+                Nenhum vendedor listado. Vincule vendedores em{" "}
+                <Link href="/dashboard/equipe" className="text-primary underline underline-offset-2">
+                  Equipe
+                </Link>
+                .
+              </div>
+            ) : (
+              <div className="wm-table-wrapper">
+                <table className="wm-table">
+                  <thead>
+                    <tr>
+                      <th>Vendedor</th>
+                      <th>Webinars</th>
+                      <th>Inscrições</th>
+                      <th>Conv. oferta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teamSellerMetrics.map((m) => (
+                      <tr key={m.id}>
+                        <td>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-white/90">
+                              {m.name ?? "—"}
+                            </span>
+                            <span className="text-xs text-white/45">
+                              {m.email}
+                            </span>
+                          </div>
+                        </td>
+                        <td>{m.webinarsCount.toLocaleString("pt-BR")}</td>
+                        <td>{m.totalLeads.toLocaleString("pt-BR")}</td>
+                        <td>
+                          {m.offerConversionPercent == null
+                            ? "—"
+                            : `${m.offerConversionPercent}%`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="wm-content-row">
           <div className="wm-chart-card">
             <div className="wm-chart-header">
               <h3 className="flex items-center gap-2">
-                <BarChart3 className="h-6 w-6 text-[var(--color-vermelho)]" />
+                <BarChart3 className="h-6 w-6 text-primary" />
                 Inscrições (últimos 7 dias)
               </h3>
               <span>
@@ -293,20 +361,20 @@ export function DashboardExecutive({
                     }}
                     formatter={(v) => [`${v}`, "Inscrições"]}
                     labelFormatter={(l) => `Dia ${l}`}
-                    cursor={{ stroke: theme.colors.vermelho, strokeWidth: 2, fill: "transparent" }}
+                    cursor={{ stroke: theme.colors.accent, strokeWidth: 2, fill: "transparent" }}
                   />
 
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke={theme.colors.vermelho}
+                    stroke={theme.colors.accent}
                     strokeWidth={3}
                     fill="url(#wmChartFill)"
                     dot={{
                       r: 4,
                       stroke: theme.colors.branco,
                       strokeWidth: 2,
-                      fill: theme.colors.vermelho,
+                      fill: theme.colors.accent,
                     }}
                     activeDot={{ r: 6 }}
                   />
@@ -317,7 +385,7 @@ export function DashboardExecutive({
 
           <div className="wm-card">
             <div className="wm-card-header">
-              <Calendar className="h-6 w-6 text-[var(--color-vermelho)]" />
+              <Calendar className="h-6 w-6 text-primary" />
               <h3 className="wm-card-header-title">Próximos ao vivo</h3>
             </div>
             <ul className="wm-upcoming-list">
@@ -370,7 +438,7 @@ export function DashboardExecutive({
 
         <div className="wm-recent-section">
           <div className="wm-section-header">
-            <BarChart3 className="h-7 w-7 text-[var(--color-vermelho)]" />
+            <BarChart3 className="h-7 w-7 text-primary" />
             <h2 className="wm-section-header-title">{webinarsSectionTitle}</h2>
           </div>
           <div className="wm-table-wrapper">
@@ -391,10 +459,10 @@ export function DashboardExecutive({
                   <tr key={w.id}>
                     <td>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Play className="h-4 w-4 shrink-0 text-[var(--color-vermelho)]" />
+                        <Play className="h-4 w-4 shrink-0 text-primary" />
                         <span>{w.name}</span>
                         {w.ownerUserId !== currentUserId && (
-                          <span className="rounded bg-violet-600/25 px-1.5 py-0.5 text-[10px] font-medium uppercase text-violet-200">
+                          <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium uppercase text-primary">
                             Equipe
                           </span>
                         )}
@@ -458,16 +526,16 @@ export function DashboardExecutive({
                           href={`/dashboard/webinars/${w.id}/analytics`}
                           title="Estatísticas"
                         >
-                          <BarChart3 className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-[var(--color-vermelho)]" />
+                          <BarChart3 className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
                         </Link>
                         <Link
                           href={`/dashboard/webinars/${w.id}/live`}
                           title="Visualizar"
                         >
-                          <Eye className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-[var(--color-vermelho)]" />
+                          <Eye className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
                         </Link>
                         <Link href={`/webinar/${w.id}/builder`} title="Configurar (builder)">
-                          <Settings className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-[var(--color-vermelho)]" />
+                          <Settings className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
                         </Link>
                         <a
                           href={`/${w.slug}`}
@@ -476,7 +544,7 @@ export function DashboardExecutive({
                           title="Tocar/Assistir (link do cliente)"
                           className="inline-flex items-center justify-center"
                         >
-                          <Play className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-[var(--color-vermelho)]" />
+                          <Play className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
                         </a>
                         <button
                           type="button"
@@ -500,9 +568,9 @@ export function DashboardExecutive({
                           }}
                         >
                           {copiedLeadForWebinarId === w.id ? (
-                            <Check className="h-4 w-4 text-[var(--color-vermelho)]" />
+                            <Check className="h-4 w-4 text-primary" />
                           ) : (
-                            <Copy className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-[var(--color-vermelho)]" />
+                            <Copy className="h-4 w-4 text-[var(--wm-text-secondary)] hover:text-primary motion-transition" />
                           )}
                         </button>
                       </div>

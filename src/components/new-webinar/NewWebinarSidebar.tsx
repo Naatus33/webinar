@@ -18,8 +18,8 @@ const tabs: { id: NewWebinarTab; label: string; Icon: React.ElementType }[] = [
 
 export function NewWebinarSidebar({ activeTab, onTabChange, generalValid }: NewWebinarSidebarProps) {
   return (
-    <aside className="flex w-60 flex-shrink-0 flex-col gap-1 border-r border-slate-800 bg-slate-950 p-4">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">
+    <aside className="flex w-60 flex-shrink-0 flex-col gap-1 border-r border-border bg-card/40 p-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         Etapas
       </p>
       {tabs.map(({ id, label, Icon }) => {
@@ -31,10 +31,10 @@ export function NewWebinarSidebar({ activeTab, onTabChange, generalValid }: NewW
             key={id}
             type="button"
             onClick={() => onTabChange(id)}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm motion-transition ${
               isActive
-                ? "bg-violet-600/20 text-violet-300"
-                : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                ? "bg-primary/15 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
             <Icon className="h-4 w-4 flex-shrink-0" />

@@ -19,15 +19,15 @@ export function AppHeader({ title, subtitle, userLabel }: AppHeaderProps) {
     .filter(Boolean);
 
   return (
-    <header className="border-b border-slate-800/70 bg-slate-900/40 px-4 py-3 backdrop-blur-xl">
+    <header className="border-b border-border/70 bg-card/50 px-4 py-3 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
         <div>
-          <div className="mb-1 flex items-center gap-2 text-xs text-slate-500">
+          <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
             {segments.length === 0 ? (
               <span>Início</span>
             ) : (
               <>
-                <Link href="/dashboard" className="hover:text-slate-300">
+                <Link href="/dashboard" className="hover:text-foreground">
                   Dashboard
                 </Link>
                 {segments.map((segment, index) => {
@@ -35,11 +35,11 @@ export function AppHeader({ title, subtitle, userLabel }: AppHeaderProps) {
                   const isLast = index === segments.length - 1;
                   return (
                     <span key={href} className="flex items-center gap-2">
-                      <span className="text-slate-700">/</span>
+                      <span className="text-border">/</span>
                       {isLast ? (
-                        <span className="text-slate-400">{decodeURIComponent(segment)}</span>
+                        <span className="text-muted-foreground">{decodeURIComponent(segment)}</span>
                       ) : (
-                        <Link href={href} className="hover:text-slate-300">
+                        <Link href={href} className="hover:text-foreground">
                           {decodeURIComponent(segment)}
                         </Link>
                       )}
@@ -49,9 +49,9 @@ export function AppHeader({ title, subtitle, userLabel }: AppHeaderProps) {
               </>
             )}
           </div>
-          <h1 className="text-lg font-semibold text-slate-50">{title}</h1>
+          <h1 className="text-lg font-semibold text-foreground">{title}</h1>
           {subtitle && (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               {subtitle}
             </p>
           )}
@@ -59,8 +59,8 @@ export function AppHeader({ title, subtitle, userLabel }: AppHeaderProps) {
 
         <div className="flex items-center gap-3">
           {userLabel && (
-            <div className="flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1 text-xs text-slate-300 ring-1 ring-slate-700/70">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-violet-500 to-indigo-500 text-[10px] font-semibold text-white">
+            <div className="flex items-center gap-2 rounded-full bg-muted/60 px-3 py-1 text-xs text-foreground/90 ring-1 ring-border/70">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[#424769] text-[10px] font-semibold text-primary-foreground">
                 {userLabel
                   .split(" ")
                   .map((part) => part[0])
@@ -73,7 +73,7 @@ export function AppHeader({ title, subtitle, userLabel }: AppHeaderProps) {
           )}
           <Link
             href="/api/auth/signout"
-            className="inline-flex items-center gap-1 rounded-full border border-slate-700/70 bg-slate-900/70 px-3 py-1 text-xs font-medium text-slate-300 shadow-sm transition hover:border-violet-500/70 hover:text-white hover:shadow-[0_0_20px_rgba(79,70,229,0.55)]"
+            className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm motion-transition hover:border-primary/50 hover:text-foreground hover:shadow-[0_0_20px_rgba(249,177,122,0.2)]"
           >
             <LogOut className="h-3.5 w-3.5" />
             Sair

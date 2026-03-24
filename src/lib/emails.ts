@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 
+import { log } from "@/lib/logger";
+
 function getResend() {
   const key = process.env.RESEND_API_KEY;
   if (!key) return null;
@@ -23,7 +25,7 @@ export async function sendConfirmationEmail({
 }) {
   const resend = getResend();
   if (!resend) {
-    console.warn("[emails] RESEND_API_KEY não configurada. E-mail não enviado.");
+    log.warn("emails.resend_missing", { fn: "sendConfirmationEmail" });
     return;
   }
 
@@ -51,6 +53,7 @@ export async function sendConfirmationEmail({
   });
 }
 
+/** @returns true se o e-mail foi enviado (Resend configurado e chamada ok). */
 export async function sendReminderEmail({
   to,
   name,
@@ -61,9 +64,12 @@ export async function sendReminderEmail({
   name: string;
   webinarName: string;
   watchUrl: string;
-}) {
+}): Promise<boolean> {
   const resend = getResend();
-  if (!resend) return;
+  if (!resend) {
+    log.warn("emails.resend_missing", { fn: "sendReminderEmail" });
+    return false;
+  }
 
   const body = `
     <div style="font-family: sans-serif; max-width: 520px; margin: auto; color: #1e293b;">
@@ -81,4 +87,5 @@ export async function sendReminderEmail({
     subject: `Lembrete: ${webinarName} começa em 1 hora!`,
     html: body,
   });
+  return true;
 }

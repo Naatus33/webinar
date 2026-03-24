@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, rateLimitKey } from "@/lib/rate-limit";
 
 const PAGE_LIMIT = 100;
+
+const chatPostSchema = z.object({
+  author: z.string().min(1).max(80).trim(),
+  content: z.string().min(1).max(2000).trim(),
+  timestamp: z.number().int().optional().nullable(),
+});
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,9 +35,27 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { author, content, timestamp } = await request.json();
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? request.headers.get("x-real-ip")
+    ?? "unknown";
+  const rl = await checkRateLimit(rateLimitKey("chat", `${ip}:${id}`), { windowMs: 60_000, max: 60 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Muitas mensagens. Aguarde um momento." }, { status: 429 });
+  }
 
-  if (!author || !content) return NextResponse.json({ error: "Autor e conteúdo são obrigatórios" }, { status: 400 });
+  let json: unknown;
+  try {
+    json = await request.json();
+  } catch {
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+  }
+
+  const parsed = chatPostSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Autor e conteúdo são obrigatórios" }, { status: 400 });
+  }
+
+  const { author, content, timestamp } = parsed.data;
 
   const webinar = await prisma.webinar.findUnique({ where: { id }, select: { id: true, config: true } });
   if (!webinar) return NextResponse.json({ error: "Webinar não encontrado" }, { status: 404 });

@@ -9,7 +9,7 @@ function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; o
         <p className="text-sm font-medium text-slate-200">{label}</p>
         {description && <p className="text-xs text-slate-500">{description}</p>}
       </div>
-      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-violet-600" : "bg-slate-700"}`}>
+      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-slate-700"}`}>
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
       </button>
     </div>
@@ -42,7 +42,7 @@ export function ScarcityPanel() {
                 type="text"
                 value={scarcity.message}
                 onChange={(e) => updateConfig("scarcity", { message: e.target.value })}
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2"
+                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
                 placeholder="Vagas limitadas!"
               />
             </div>
@@ -54,7 +54,7 @@ export function ScarcityPanel() {
                 min={1}
                 value={scarcity.count}
                 onChange={(e) => updateConfig("scarcity", { count: parseInt(e.target.value) || 0 })}
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2"
+                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
               />
             </div>
 
@@ -73,7 +73,7 @@ export function ScarcityPanel() {
                     min={1}
                     value={scarcity.timer.totalSeconds}
                     onChange={(e) => setConfigField(["scarcity", "timer", "totalSeconds"], parseInt(e.target.value) || 600)}
-                    className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2"
+                    className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
                   />
                 </div>
               )}

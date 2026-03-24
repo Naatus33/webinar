@@ -133,7 +133,7 @@ export function TopicsDashboardClient() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Ex: Vendas, Marketing, Onboarding..."
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2"
+              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
               disabled={creating}
             />
           </div>
@@ -141,7 +141,7 @@ export function TopicsDashboardClient() {
             type="button"
             onClick={handleCreate}
             disabled={creating || newName.trim().length === 0}
-            className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-60"
+            className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-110 disabled:opacity-60"
           >
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
             Adicionar
@@ -182,7 +182,7 @@ export function TopicsDashboardClient() {
                           type="text"
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
-                          className="h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2"
+                          className="h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
                           disabled={savingEdit}
                         />
                       ) : (
@@ -198,7 +198,7 @@ export function TopicsDashboardClient() {
                               type="button"
                               onClick={handleSaveEdit}
                               disabled={savingEdit || editingName.trim().length === 0}
-                              className="inline-flex h-8 items-center justify-center rounded-md bg-violet-600 px-3 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-60"
+                              className="inline-flex h-8 items-center justify-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:brightness-110 disabled:opacity-60"
                             >
                               Salvar
                             </button>

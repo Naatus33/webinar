@@ -22,6 +22,32 @@ export default async function BuilderPage({ params }: BuilderPageProps) {
 
   const webinar = await prisma.webinar.findUnique({
     where: { id },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      code: true,
+      slug: true,
+      videoUrl: true,
+      startDate: true,
+      startTime: true,
+      useNativeStreaming: true,
+      redirectEnabled: true,
+      redirectUrl: true,
+      passwordEnabled: true,
+      password: true,
+      replayEnabled: true,
+      lgpdEnabled: true,
+      lgpdText: true,
+      regBgImage: true,
+      regLogoUrl: true,
+      regDescription: true,
+      regTitle: true,
+      regCtaText: true,
+      regSponsors: true,
+      config: true,
+      userId: true,
+    },
   });
 
   if (!webinar) notFound();
@@ -31,32 +57,35 @@ export default async function BuilderPage({ params }: BuilderPageProps) {
     redirect("/dashboard");
   }
 
+  const { password: _pw, ...webinarPublic } = webinar;
+  const hasCapturePassword = Boolean(_pw);
+
   return (
     <BuilderClient
       webinar={{
-        id: webinar.id,
-        name: webinar.name,
-        status: webinar.status,
-        code: webinar.code,
-        slug: webinar.slug,
-        videoUrl: webinar.videoUrl,
-        startDate: webinar.startDate?.toISOString() ?? null,
-        startTime: webinar.startTime,
-        useNativeStreaming: webinar.useNativeStreaming,
-        redirectEnabled: webinar.redirectEnabled,
-        redirectUrl: webinar.redirectUrl,
-        passwordEnabled: webinar.passwordEnabled,
-        password: webinar.password,
-        replayEnabled: webinar.replayEnabled,
-        lgpdEnabled: webinar.lgpdEnabled,
-        lgpdText: webinar.lgpdText,
-        regBgImage: webinar.regBgImage,
-        regLogoUrl: webinar.regLogoUrl,
-        regDescription: webinar.regDescription,
-        regTitle: webinar.regTitle,
-        regCtaText: webinar.regCtaText,
-        regSponsors: (webinar.regSponsors as { name: string; logoUrl: string }[]) ?? [],
-        config: webinar.config as WebinarConfig,
+        id: webinarPublic.id,
+        name: webinarPublic.name,
+        status: webinarPublic.status,
+        code: webinarPublic.code,
+        slug: webinarPublic.slug,
+        videoUrl: webinarPublic.videoUrl,
+        startDate: webinarPublic.startDate?.toISOString() ?? null,
+        startTime: webinarPublic.startTime,
+        useNativeStreaming: webinarPublic.useNativeStreaming,
+        redirectEnabled: webinarPublic.redirectEnabled,
+        redirectUrl: webinarPublic.redirectUrl,
+        passwordEnabled: webinarPublic.passwordEnabled,
+        hasCapturePassword,
+        replayEnabled: webinarPublic.replayEnabled,
+        lgpdEnabled: webinarPublic.lgpdEnabled,
+        lgpdText: webinarPublic.lgpdText,
+        regBgImage: webinarPublic.regBgImage,
+        regLogoUrl: webinarPublic.regLogoUrl,
+        regDescription: webinarPublic.regDescription,
+        regTitle: webinarPublic.regTitle,
+        regCtaText: webinarPublic.regCtaText,
+        regSponsors: (webinarPublic.regSponsors as { name: string; logoUrl: string }[]) ?? [],
+        config: webinarPublic.config as WebinarConfig,
       }}
     />
   );

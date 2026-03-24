@@ -19,7 +19,7 @@ export function ContentPanel() {
           type="text"
           value={content.title}
           onChange={(e) => updateConfig("content", { title: e.target.value })}
-          className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2"
+          className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2"
           placeholder="Título do seu webinar"
         />
       </div>
@@ -30,7 +30,7 @@ export function ContentPanel() {
           type="text"
           value={content.subtitle}
           onChange={(e) => updateConfig("content", { subtitle: e.target.value })}
-          className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2"
+          className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2"
           placeholder="Subtítulo ou slogan"
         />
       </div>
@@ -41,7 +41,7 @@ export function ContentPanel() {
           value={content.description}
           onChange={(e) => updateConfig("content", { description: e.target.value })}
           rows={4}
-          className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-violet-500 placeholder:text-slate-500 focus:ring-2 resize-none"
+          className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-primary placeholder:text-slate-500 focus:ring-2 resize-none"
           placeholder="Descrição que aparece abaixo do player..."
         />
       </div>

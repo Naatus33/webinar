@@ -4,6 +4,10 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { MessageCircle, X, Users, AlertTriangle, ChevronUp, Pin, Maximize2, Minimize2, Heart, Timer } from "lucide-react";
 import type { WebinarConfig } from "@/lib/webinar-templates";
+import {
+  applyMergeFields,
+  type PublicCopyOverrides,
+} from "@/lib/public-copy-personalization";
 import { computePublicWatchPhase } from "@/lib/webinar-timing";
 import { useChatSse } from "@/lib/useChatSse";
 
@@ -41,7 +45,13 @@ const PHASE_COLORS: Record<string, string> = {
   red: "#EF4444",   // Red 500
 };
 
-export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
+export function WatchPageClient({
+  webinar,
+  copyOverrides = { headline: null, subtitle: null, description: null },
+}: {
+  webinar: WebinarData;
+  copyOverrides?: PublicCopyOverrides;
+}) {
   const { config } = webinar;
   const [phase, setPhase] = useState<"waiting" | "live" | "replay">("live");
   const [countdown, setCountdown] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
@@ -50,7 +60,8 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
   const [focusMode, setFocusMode] = useState(false); // teatro mode
   
   const [playerSeconds, setPlayerSeconds] = useState(0);
-  const [name] = useState(() => typeof window !== "undefined" ? (sessionStorage.getItem("lead_name") ?? "Participante") : "Participante");
+  const [leadName, setLeadName] = useState("Participante");
+  const [leadEmail, setLeadEmail] = useState("");
   const [chatInput, setChatInput] = useState("");
   
   const [offerPhase, setOfferPhase] = useState<"green" | "yellow" | "orange" | "red">("green");
@@ -95,6 +106,16 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
     const interval = setInterval(tickPhase, 1000);
     return () => clearInterval(interval);
   }, [tickPhase]);
+
+  useEffect(() => {
+    try {
+      setLeadName(sessionStorage.getItem("lead_name") ?? "Participante");
+      setLeadEmail(sessionStorage.getItem("lead_email") ?? "");
+    } catch {
+      setLeadName("Participante");
+      setLeadEmail("");
+    }
+  }, []);
 
   useEffect(() => {
     const initial = Math.floor(Math.random() * (config.participants.max - config.participants.min + 1)) + config.participants.min;
@@ -197,7 +218,7 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        author: name,
+        author: leadName,
         content: chatInput.trim(),
         // No modo replay, o timestamp é usado para renderizar a mensagem no "tempo" certo.
         timestamp:
@@ -221,9 +242,25 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
     ? config.offer.colorTimer.phases[offerPhase].text
     : "Quero participar!";
 
+  const mergeCtx = { name: leadName, email: leadEmail };
+  const displayTitle = applyMergeFields(
+    copyOverrides.headline ?? config.content.title,
+    mergeCtx,
+  );
+  const displaySubtitle = applyMergeFields(
+    copyOverrides.subtitle ?? config.content.subtitle,
+    mergeCtx,
+  );
+  const displayDescription = applyMergeFields(
+    copyOverrides.description ?? config.content.description,
+    mergeCtx,
+  );
+  const showContentBlock =
+    Boolean(displayTitle) || Boolean(displaySubtitle) || Boolean(displayDescription);
+
   return (
     <div
-      className={`flex h-[100dvh] flex-col overflow-hidden transition-colors duration-500`}
+      className={`flex min-h-[100dvh] flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] transition-colors duration-500`}
       style={{ backgroundColor: focusMode ? '#000000' : config.layout.bgColor }}
     >
       <style dangerouslySetInnerHTML={{__html: `
@@ -373,11 +410,18 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
           </div>
 
           {/* Description Below Player - Hides in Focus Mode */}
-          {!focusMode && (config.content.title || config.content.description) && (
+          {!focusMode && showContentBlock && (
             <div className="px-4 py-6 md:px-2 animate-in fade-in duration-700">
-              {config.content.title && <h2 className="text-2xl font-bold text-white tracking-tight">{config.content.title}</h2>}
-              {config.content.description && (
-                <p className="mt-2 text-base leading-relaxed text-white/70 max-w-3xl">{config.content.description}</p>
+              {displayTitle && (
+                <h2 className="text-2xl font-bold text-white tracking-tight">{displayTitle}</h2>
+              )}
+              {displaySubtitle && (
+                <p className="mt-1 text-sm font-medium uppercase tracking-wide text-white/60">
+                  {displaySubtitle}
+                </p>
+              )}
+              {displayDescription && (
+                <p className="mt-2 text-base leading-relaxed text-white/70 max-w-3xl">{displayDescription}</p>
               )}
             </div>
           )}
@@ -432,7 +476,7 @@ export function WatchPageClient({ webinar }: { webinar: WebinarData }) {
           <div className={`absolute bottom-0 w-full transition-transform duration-300 ${chatOpen ? 'translate-y-[-60vh]' : 'translate-y-0'}`}>
              <button 
               onClick={() => setChatOpen(!chatOpen)}
-              className="flex w-full items-center justify-center gap-2 bg-slate-900/90 backdrop-blur-md py-3 text-sm font-medium text-white border-t border-white/10 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] rounded-t-2xl"
+              className="flex w-full items-center justify-center gap-2 bg-slate-900/90 backdrop-blur-md py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm font-medium text-white border-t border-white/10 shadow-[0_-10px_20px_rgba(0,0,0,0.2)] rounded-t-2xl motion-safe:transition-transform"
             >
               <MessageCircle className="h-4 w-4" style={{ color: config.branding.primaryColor }} />
               {chatOpen ? "Esconder Chat" : "Mostrar Chat"}
@@ -527,7 +571,7 @@ function ChatBox({
         </div>
       )}
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-4 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent]">
         {messages.filter((m) => !m.pinned).map((m) => (
           <div key={m.id} className="flex flex-col gap-1">
             <span className="text-xs font-bold" style={{ color: primaryColor }}>{m.author}</span>

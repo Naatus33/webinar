@@ -122,7 +122,7 @@ export function TopicsPicker({
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggle(t.id)}
-                    className="accent-violet-600"
+                    className="accent-primary"
                   />
                   <span className="text-sm text-slate-100">{t.name}</span>
                 </div>
@@ -148,7 +148,7 @@ export function TopicsPicker({
               value={newTopicName}
               onChange={(e) => setNewTopicName(e.target.value)}
               placeholder="Ex: IA, Vendas, Gestão..."
-              className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2"
+              className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none ring-primary focus:ring-2"
               disabled={creating}
             />
           </div>
@@ -156,7 +156,7 @@ export function TopicsPicker({
             type="button"
             onClick={handleCreateTopic}
             disabled={creating || newTopicName.trim().length === 0}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-110 disabled:opacity-60 motion-transition"
           >
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
             Criar

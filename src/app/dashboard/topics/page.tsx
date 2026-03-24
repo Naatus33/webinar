@@ -22,7 +22,7 @@ export default async function TopicsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-app-gradient text-slate-50">
+    <div className="min-h-screen bg-app-gradient text-foreground">
       <div className="flex min-h-screen">
         <AppSidebar />
 
@@ -34,7 +34,7 @@ export default async function TopicsPage() {
           />
 
           <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-10 pt-6 md:px-6">
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.95)]">
+            <div className="rounded-2xl border border-border/80 bg-card/50 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-sm">
               <TopicsDashboardClient />
             </div>
           </main>

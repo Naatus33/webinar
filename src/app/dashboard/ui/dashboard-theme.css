@@ -1,4 +1,4 @@
-/* Tema Webinar Manager — Dashboard executivo (dark vermelho) */
+/* Tema Webinar Manager — Dashboard executivo (paleta SaaS) */
 
 :root {
   /* Mapeia variáveis específicas do dashboard para o tema global */
@@ -96,15 +96,20 @@
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 0;
+  transition:
+    transform var(--motion-duration-normal, 220ms)
+      var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+    box-shadow var(--motion-duration-normal, 220ms) ease,
+    background-color var(--motion-duration-fast, 150ms) ease,
+    color var(--motion-duration-fast, 150ms) ease;
+  border-radius: 0.75rem;
 }
 
 .wm-btn-new:hover {
   background-color: transparent;
   color: var(--wm-accent);
-  transform: scale(1.02);
-  box-shadow: 0 8px 16px rgba(230, 57, 70, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(249, 177, 122, 0.35);
 }
 
 .wm-profile-badge {
@@ -158,7 +163,7 @@
   transform: translateY(-4px);
   border-color: var(--wm-accent);
   border-left-width: 8px;
-  box-shadow: 0 12px 24px -8px rgba(230, 57, 70, 0.3);
+  box-shadow: 0 12px 24px -8px rgba(249, 177, 122, 0.28);
 }
 
 .wm-stat-info h3 {
@@ -255,7 +260,7 @@
 
 .wm-card:hover {
   border-color: var(--wm-accent);
-  box-shadow: 0 8px 20px rgba(230, 57, 70, 0.25);
+  box-shadow: 0 8px 20px rgba(249, 177, 122, 0.22);
 }
 
 .wm-card-header {
@@ -494,6 +499,22 @@
   }
   .wm-stat-number {
     font-size: 2.2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-body,
+  .wm-top-bar,
+  .wm-stat-card,
+  .wm-card,
+  .wm-chart-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .wm-btn-new:hover {
+    transform: none;
   }
 }
 

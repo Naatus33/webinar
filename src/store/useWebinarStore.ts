@@ -17,7 +17,8 @@ interface WebinarMeta {
   redirectEnabled: boolean;
   redirectUrl: string | null;
   passwordEnabled: boolean;
-  password: string | null;
+  /** Indica se existe senha de captura definida no servidor (nunca enviar o valor ao cliente). */
+  hasCapturePassword: boolean;
   replayEnabled: boolean;
   lgpdEnabled: boolean;
   lgpdText: string | null;

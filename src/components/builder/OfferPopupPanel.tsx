@@ -10,7 +10,7 @@ function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; o
         <p className="text-sm font-medium text-slate-200">{label}</p>
         {description && <p className="text-xs text-slate-500">{description}</p>}
       </div>
-      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-violet-600" : "bg-slate-700"}`}>
+      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-slate-700"}`}>
         <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
       </button>
     </div>
@@ -53,37 +53,37 @@ export function OfferPopupPanel() {
               <label className="block text-xs font-medium text-slate-400">Aparecer após (minutos)</label>
               <input type="number" min={0} value={offerPopup.delayMinutes}
                 onChange={(e) => updateConfig("offerPopup", { delayMinutes: parseInt(e.target.value) || 0 })}
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2" />
+                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2" />
             </div>
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-slate-400">Fechar automaticamente após (segundos, 0 = manual)</label>
               <input type="number" min={0} value={offerPopup.autoCloseSeconds}
                 onChange={(e) => updateConfig("offerPopup", { autoCloseSeconds: parseInt(e.target.value) || 0 })}
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2" />
+                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2" />
             </div>
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-slate-400">Título do pop-up</label>
               <input type="text" value={offerPopup.title}
                 onChange={(e) => updateConfig("offerPopup", { title: e.target.value })}
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2" placeholder="Oferta especial para você!" />
+                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2" placeholder="Oferta especial para você!" />
             </div>
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-slate-400">Texto do pop-up</label>
               <textarea rows={2} value={offerPopup.text}
                 onChange={(e) => updateConfig("offerPopup", { text: e.target.value })}
-                className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2 resize-none" />
+                className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-primary focus:ring-2 resize-none" />
             </div>
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-slate-400">Texto do botão</label>
               <input type="text" value={offerPopup.buttonText}
                 onChange={(e) => updateConfig("offerPopup", { buttonText: e.target.value })}
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2" placeholder="Quero aproveitar!" />
+                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2" placeholder="Quero aproveitar!" />
             </div>
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-slate-400">URL de destino</label>
               <input type="url" value={offerPopup.buttonUrl}
                 onChange={(e) => updateConfig("offerPopup", { buttonUrl: e.target.value })}
-                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-violet-500 focus:ring-2" placeholder="https://..." />
+                className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2" placeholder="https://..." />
             </div>
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-slate-400">Imagem do pop-up</label>

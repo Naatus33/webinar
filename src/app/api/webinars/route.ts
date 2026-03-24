@@ -4,6 +4,13 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { webinarWhereForUser } from "@/lib/webinar-access";
+import { hashCapturePassword } from "@/lib/capture-password";
+import { getDefaultConfig, type WebinarConfig } from "@/lib/webinar-templates";
+import {
+  mergeUserPreferences,
+  mergeWebinarConfigWithUserDefaults,
+  parseUserPreferences,
+} from "@/lib/user-preferences-schema";
 
 // GET /api/webinars - lista webinars do usuário logado
 export async function GET() {
@@ -60,11 +67,18 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    select: { id: true },
+    select: { id: true, role: true, preferences: true },
   });
 
   if (!user) {
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 401 });
+  }
+
+  if (user.role === "VENDEDOR") {
+    return NextResponse.json(
+      { error: "Apenas gestores ou administradores podem criar webinars." },
+      { status: 403 },
+    );
   }
 
   const body = await request.json();
@@ -76,8 +90,22 @@ export async function POST(request: Request) {
     videoUrl,
     config,
     topicIds,
+    templateId: templateIdRaw,
+    password: plainCapturePassword,
     ...rest
   } = body;
+
+  const templateId =
+    typeof templateIdRaw === "string" && templateIdRaw.trim().length > 0
+      ? templateIdRaw.trim()
+      : undefined;
+
+  const prefs = parseUserPreferences(user.preferences);
+  let configPayload: WebinarConfig =
+    config != null && typeof config === "object"
+      ? (config as WebinarConfig)
+      : getDefaultConfig();
+  configPayload = mergeWebinarConfigWithUserDefaults(configPayload, prefs);
 
   if (!name || !slug) {
     return NextResponse.json(
@@ -145,6 +173,11 @@ export async function POST(request: Request) {
     };
   }
 
+  let capturePasswordHash: string | null = null;
+  if (typeof plainCapturePassword === "string" && plainCapturePassword.trim().length > 0) {
+    capturePasswordHash = await hashCapturePassword(plainCapturePassword.trim());
+  }
+
   const webinar = await prisma.webinar.create({
     data: {
       userId: user.id,
@@ -154,9 +187,9 @@ export async function POST(request: Request) {
       videoUrl: videoUrl ?? "",
       startDate: startDate ? new Date(startDate) : null,
       startTime: startTime ?? null,
-      config: config ?? {},
-      // Campos opcionais extras podem ser passados em `rest`
+      config: configPayload as object,
       ...rest,
+      ...(capturePasswordHash !== null ? { password: capturePasswordHash } : {}),
       ...(webinarTopics ? { webinarTopics } : {}),
     },
     select: {
@@ -170,6 +203,17 @@ export async function POST(request: Request) {
       config: true,
     },
   });
+
+  if (templateId !== undefined) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        preferences: mergeUserPreferences(prefs, {
+          lastWebinarTemplateId: templateId,
+        }) as object,
+      },
+    });
+  }
 
   return NextResponse.json(webinar, { status: 201 });
 }

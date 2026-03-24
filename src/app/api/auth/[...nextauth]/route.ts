@@ -22,49 +22,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
-        // #region agent log
-        fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "93a528",
-          },
-          body: JSON.stringify({
-            sessionId: "93a528",
-            runId: "pre-fix",
-            hypothesisId: "H1",
-            location: "api/auth/[...nextauth]/route.ts:authorize:start",
-            message: "authorize called",
-            data: {
-              hasEmail: Boolean(credentials?.email),
-              hasPassword: Boolean(credentials?.password),
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion agent log
-
         if (!credentials?.email || !credentials.password) {
-          // #region agent log
-          fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "93a528",
-            },
-            body: JSON.stringify({
-              sessionId: "93a528",
-              runId: "pre-fix",
-              hypothesisId: "H2",
-              location: "api/auth/[...nextauth]/route.ts:authorize:missing-credentials",
-              message: "Missing credentials in authorize",
-              data: {
-                email: credentials?.email ?? null,
-              },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion agent log
           return null;
         }
 
@@ -73,77 +31,13 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user || !user.password) {
-          // #region agent log
-          fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "93a528",
-            },
-            body: JSON.stringify({
-              sessionId: "93a528",
-              runId: "pre-fix",
-              hypothesisId: "H3",
-              location: "api/auth/[...nextauth]/route.ts:authorize:user-not-found",
-              message: "User not found or missing password",
-              data: {
-                email: credentials.email,
-                hasUser: Boolean(user),
-                hasPassword: Boolean(user?.password),
-              },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion agent log
           return null;
         }
 
         const isValid = await compare(credentials.password, user.password);
         if (!isValid) {
-          // #region agent log
-          fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "93a528",
-            },
-            body: JSON.stringify({
-              sessionId: "93a528",
-              runId: "pre-fix",
-              hypothesisId: "H4",
-              location: "api/auth/[...nextauth]/route.ts:authorize:invalid-password",
-              message: "Invalid password in authorize",
-              data: {
-                email: credentials.email,
-              },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion agent log
           return null;
         }
-
-        // #region agent log
-        fetch("http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "93a528",
-          },
-          body: JSON.stringify({
-            sessionId: "93a528",
-            runId: "pre-fix",
-            hypothesisId: "H5",
-            location: "api/auth/[...nextauth]/route.ts:authorize:success",
-            message: "Authorize succeeded",
-            data: {
-              email: user.email,
-              role: user.role,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion agent log
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const u = user as any;
@@ -181,4 +75,3 @@ export const authOptions: NextAuthOptions = {
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
-

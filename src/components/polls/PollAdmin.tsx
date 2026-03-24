@@ -103,7 +103,7 @@ export function PollAdmin({ webinarId }: { webinarId: string }) {
             type="button"
             onClick={createPoll}
             disabled={creating}
-            className="ml-auto flex h-7 items-center rounded-md bg-violet-600 px-3 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-60"
+            className="ml-auto flex h-7 items-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:brightness-110 disabled:opacity-60"
           >
             {creating ? "Criando..." : "Lançar enquete"}
           </button>
@@ -138,7 +138,7 @@ export function PollAdmin({ webinarId }: { webinarId: string }) {
                   return (
                     <div key={opt.id} className="flex items-center gap-2 text-xs">
                       <div className="relative flex-1 overflow-hidden rounded bg-slate-800">
-                        <div className="h-5 rounded bg-violet-700/50 transition-all" style={{ width: `${pct}%` }} />
+                        <div className="h-5 rounded bg-primary/50 transition-all" style={{ width: `${pct}%` }} />
                         <span className="absolute inset-0 flex items-center px-2 text-slate-300">{opt.text}</span>
                       </div>
                       <span className="w-8 text-right text-slate-400">{pct}%</span>

@@ -546,7 +546,7 @@ export function LiveOpsClient({
                 className={[
                   "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold uppercase tracking-widest whitespace-nowrap transition",
                   active
-                    ? "border-violet-500 bg-violet-600/20 text-violet-200"
+                    ? "border-primary bg-primary/15 text-primary"
                     : "border-slate-800 bg-slate-900/70 text-slate-400 hover:border-slate-700 hover:text-slate-200",
                 ].join(" ")}
               >
@@ -636,7 +636,7 @@ export function LiveOpsClient({
                   onClick={() => changeStatus(s)}
                   className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-[11px] font-medium transition ${
                     isActive
-                      ? "border-violet-500 bg-violet-600/20 text-violet-200"
+                      ? "border-primary bg-primary/15 text-primary"
                       : "border-slate-800 bg-slate-900/80 text-slate-400 hover:border-slate-600 hover:text-slate-100"
                   }`}
                 >
@@ -666,7 +666,7 @@ export function LiveOpsClient({
                 key={macro}
                 type="button"
                 onClick={() => sendMacro(macro)}
-                className="w-full rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-violet-500 hover:bg-violet-600/10"
+                className="w-full rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-left text-xs text-slate-200 hover:border-primary hover:bg-primary/10 motion-transition"
               >
                 {macro}
               </button>
@@ -683,9 +683,9 @@ export function LiveOpsClient({
           <div className="space-y-4">
             {activeTab === "chat" && (
               <section className="flex min-h-[340px] flex-col rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
-                <header className="mb-3 flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <header className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
                   <div className="flex items-center gap-2">
-                    <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-violet-600/20 text-violet-300">
+                    <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
                       <MessageCircle className="h-4 w-4" />
                     </div>
                     <div>
@@ -695,6 +695,20 @@ export function LiveOpsClient({
                       </p>
                     </div>
                   </div>
+                  {chatEnabled && (
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide motion-transition ${
+                        connected
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                          : "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-400 motion-safe:animate-pulse" : "bg-amber-400"}`}
+                      />
+                      {connected ? "SSE ativo" : "Conectando…"}
+                    </span>
+                  )}
                 </header>
 
                 {pinned && (
@@ -756,7 +770,7 @@ export function LiveOpsClient({
             {activeTab === "offer" && (
               <section className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-lg">
                 <div className="flex items-center gap-2">
-                  <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-violet-600/20 text-violet-300">
+                  <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
                     <PlayCircle className="h-4 w-4" />
                   </div>
                   <div>
@@ -776,7 +790,7 @@ export function LiveOpsClient({
                     onClick={() => setShowOffer((v) => !v)}
                     className={[
                       "inline-flex h-9 w-16 items-center justify-center rounded-full border text-xs font-bold transition",
-                      showOffer ? "border-violet-500 bg-violet-600/20 text-violet-200" : "border-slate-800 bg-slate-900/80 text-slate-400",
+                      showOffer ? "border-primary bg-primary/15 text-primary" : "border-slate-800 bg-slate-900/80 text-slate-400",
                     ].join(" ")}
                   >
                     {showOffer ? "ON" : "OFF"}
@@ -849,7 +863,7 @@ export function LiveOpsClient({
                     onClick={() => setShowVideoControls((v) => !v)}
                     className={[
                       "inline-flex h-9 w-16 items-center justify-center rounded-full border text-xs font-bold transition",
-                      showVideoControls ? "border-violet-500 bg-violet-600/20 text-violet-200" : "border-slate-800 bg-slate-900/80 text-slate-400",
+                      showVideoControls ? "border-primary bg-primary/15 text-primary" : "border-slate-800 bg-slate-900/80 text-slate-400",
                     ].join(" ")}
                   >
                     {showVideoControls ? "ON" : "OFF"}

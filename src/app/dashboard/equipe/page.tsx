@@ -26,7 +26,7 @@ export default async function EquipePage() {
       : "Minha equipe";
 
   return (
-    <div className="min-h-screen bg-app-gradient text-slate-50">
+    <div className="min-h-screen bg-app-gradient text-foreground">
       <div className="flex min-h-screen">
         <AppSidebar />
 
@@ -45,20 +45,20 @@ export default async function EquipePage() {
             <div className="mb-4">
               <EquipeHeaderActions />
             </div>
-            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
-              <Users className="h-10 w-10 text-violet-400" />
+            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-border/80 bg-card/50 p-4 backdrop-blur-sm">
+              <Users className="h-10 w-10 text-primary" />
               <div>
-                <p className="font-semibold text-slate-100">
+                <p className="font-semibold text-foreground">
                   {user.role === "ADMIN" ? "Administração de equipe" : "Painel do gestor"}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {user.role === "ADMIN"
                     ? "Gestores veem webinars dos vendedores vinculados."
                     : "Seus vendedores e os respectivos webinars aparecem no dashboard principal."}
                 </p>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.95)]">
+            <div className="rounded-2xl border border-border/80 bg-card/50 p-5 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-sm">
               <EquipeClient role={user.role === "ADMIN" ? "ADMIN" : "GERENTE"} />
             </div>
           </main>

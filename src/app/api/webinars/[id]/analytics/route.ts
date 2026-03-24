@@ -19,9 +19,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: access.status === 404 ? "Não encontrado" : "Sem permissão" }, { status: access.status });
   }
 
-  const [webinar, leadsAll, pingsByMinute, visits, chatMessages] = await Promise.all([
+  const [webinar, leadsAll, recentLeads, pingsByMinute, visits, chatMessages] = await Promise.all([
     prisma.webinar.findUnique({ where: { id }, select: { id: true, name: true, status: true } }),
     prisma.lead.findMany({ where: { webinarId: id }, select: { id: true, watchedPercent: true, createdAt: true } }),
+    prisma.lead.findMany({
+      where: { webinarId: id },
+      select: { id: true, name: true, email: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
     prisma.viewerPing.groupBy({
       by: ["minute"],
       where: { webinarId: id },
@@ -59,5 +65,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, count]) => ({ date, count }));
 
-  return NextResponse.json({ totalLeads, watchedLeads, avgWatched, visits, chatMessages, funnel, retention, leadsTrend });
+  return NextResponse.json({
+    totalLeads,
+    watchedLeads,
+    avgWatched,
+    visits,
+    chatMessages,
+    funnel,
+    retention,
+    leadsTrend,
+    recentLeads: recentLeads.map((l) => ({
+      id: l.id,
+      name: l.name,
+      email: l.email,
+      createdAt: l.createdAt.toISOString(),
+    })),
+  });
 }
