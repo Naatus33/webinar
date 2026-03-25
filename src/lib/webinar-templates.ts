@@ -54,7 +54,7 @@ export type WebinarConfig = {
       };
     };
   };
-  chat: { enabled: boolean; mode: "live" | "replay"; readonly: boolean };
+  chat: { enabled: boolean; mode: "live" | "replay"; readonly: boolean; adminOnly: boolean };
   participants: { enabled: boolean; min: number; max: number; autoVariation: boolean };
   layout: { 
     chatPosition: "right" | "left"; 
@@ -88,6 +88,14 @@ export type WebinarConfig = {
     fakeCities: string[]; // NOVO: Customização de cidades
   };
   captureCounter: { enabled: boolean; mode: "real" | "fake"; fakeBase: number };
+  adminAvatar: { logoUrl: string; displayName: string };
+  scarcityButton: {
+    enabled: boolean;
+    color: "green" | "yellow" | "red";
+    label: string;
+    autoTimer: boolean;
+    timerSeconds: number;
+  };
 };
 
 export type WebinarTemplate = {
@@ -140,7 +148,7 @@ const defaultConfig: WebinarConfig = {
       },
     },
   },
-  chat: { enabled: true, mode: "live", readonly: false },
+  chat: { enabled: true, mode: "live", readonly: false, adminOnly: false },
   participants: { enabled: true, min: 100, max: 500, autoVariation: true },
   layout: { 
     chatPosition: "right", 
@@ -165,6 +173,8 @@ const defaultConfig: WebinarConfig = {
     fakeCities: ["São Paulo", "Rio de Janeiro", "Belo Horizonte", "Curitiba", "Porto Alegre"]
   },
   captureCounter: { enabled: true, mode: "fake", fakeBase: 1200 },
+  adminAvatar: { logoUrl: "", displayName: "Administrador" },
+  scarcityButton: { enabled: false, color: "green", label: "Garanta sua vaga!", autoTimer: false, timerSeconds: 60 },
 };
 
 export const webinarTemplates: WebinarTemplate[] = [

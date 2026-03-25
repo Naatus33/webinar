@@ -135,9 +135,12 @@ model Webinar {
   macros Json? // [{ id, label, text, action, pin }]
   
   // Escassez Dinâmica
-  spotsCount    Int?     @default(0)
-  spotsTotal    Int?     @default(0)
-  showSpots     Boolean  @default(false)
+  spotsCount      Int?     @default(0)
+  spotsTotal      Int?     @default(0)
+  showSpots       Boolean  @default(false)
+
+  // Contador de viewers por heartbeat
+  liveViewerCount Int      @default(0)
 
   // Relações
   leads        Lead[]
@@ -174,6 +177,8 @@ model Lead {
   lgpdConsent    Boolean  @default(false)
   /// Lembrete 1h antes enviado (evita duplicatas se o cron correr várias vezes)
   reminderEmailSentAt DateTime?
+  /// Última vez que o lead enviou heartbeat da sala ao vivo
+  lastSeenAt     DateTime?
   createdAt      DateTime @default(now())
 
   @@index([webinarId])
@@ -182,17 +187,34 @@ model Lead {
 // Chat
 
 model ChatMessage {
-  id        String   @id @default(cuid())
-  webinarId String
-  webinar   Webinar  @relation(fields: [webinarId], references: [id])
-  author    String
-  content   String
-  pinned    Boolean  @default(false)
-  deleted   Boolean  @default(false)
-  timestamp Int?
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  webinarId      String
+  webinar        Webinar  @relation(fields: [webinarId], references: [id])
+  author         String
+  content        String
+  type           String   @default("normal") // "normal" | "urgent" | "warning"
+  replyToContent String?
+  replyToAuthor  String?
+  pinned         Boolean  @default(false)
+  deleted        Boolean  @default(false)
+  timestamp      Int?
+  createdAt      DateTime @default(now())
+
+  hearts ChatMessageHeart[]
 
   @@index([webinarId, createdAt])
+}
+
+/// Curtidas por mensagem (uma por viewerKey — participante na sala ao vivo)
+model ChatMessageHeart {
+  id        String      @id @default(cuid())
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  viewerKey String
+  createdAt DateTime    @default(now())
+
+  @@unique([messageId, viewerKey])
+  @@index([messageId])
 }
 
 // Enquetes

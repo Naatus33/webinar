@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { formatWebinarStartLabelPtBr } from "@/lib/webinar-timing";
 
 interface GeneralSettingsTabProps {
   name: string;
@@ -79,6 +81,8 @@ export function GeneralSettingsTab({
     onChangeSlug(toSlug(value));
   }
 
+  const eventStartPreview = formatWebinarStartLabelPtBr(startDate || null, startTime || null);
+
   return (
     <div className="space-y-6 p-6">
       <div className="space-y-1">
@@ -151,19 +155,12 @@ export function GeneralSettingsTab({
             <p className="text-sm font-medium text-slate-200">Utilizar streaming nativo</p>
             <p className="text-xs text-slate-500">Transmita diretamente pela plataforma (máx. 4h)</p>
           </div>
-          <button
-            type="button"
-            onClick={() => onChangeNativeStreaming(!useNativeStreaming)}
-            className={`relative h-5 w-9 rounded-full transition-colors ${
-              useNativeStreaming ? "bg-primary" : "bg-muted"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                useNativeStreaming ? "translate-x-4" : "translate-x-0.5"
-              }`}
-            />
-          </button>
+          <Switch
+            enabled={useNativeStreaming}
+            onToggle={() => onChangeNativeStreaming(!useNativeStreaming)}
+            aria-label="Utilizar streaming nativo"
+            className="shrink-0 motion-transition"
+          />
         </div>
 
         {/* URL do vídeo */}
@@ -191,6 +188,7 @@ export function GeneralSettingsTab({
               value={startDate}
               onChange={(e) => onChangeStartDate(e.target.value)}
               className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
+              lang="pt-BR"
             />
           </div>
           <div className="space-y-1.5">
@@ -200,8 +198,18 @@ export function GeneralSettingsTab({
               value={startTime}
               onChange={(e) => onChangeStartTime(e.target.value)}
               className="h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
+              lang="pt-BR"
             />
           </div>
+        </div>
+
+        <div className="rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2.5 text-xs text-slate-400">
+          <span className="font-medium text-slate-300">Na página de inscrição: </span>
+          {eventStartPreview ? (
+            <span className="text-slate-200">início em {eventStartPreview}</span>
+          ) : (
+            <span>defina data (e hora) para o visitante ver quando o evento começa.</span>
+          )}
         </div>
       </div>
     </div>

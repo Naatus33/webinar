@@ -1,20 +1,7 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/switch-row";
 import { useWebinarStore } from "@/store/useWebinarStore";
-
-function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; onToggle: () => void; label: string; description?: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-slate-200">{label}</p>
-        {description && <p className="text-xs text-slate-500">{description}</p>}
-      </div>
-      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-slate-700"}`}>
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
-      </button>
-    </div>
-  );
-}
 
 export function SocialProofPanel() {
   const { config, updateConfig } = useWebinarStore();
@@ -29,7 +16,12 @@ export function SocialProofPanel() {
 
       {/* Pop-up prova social */}
       <div className="space-y-4 rounded-lg border border-slate-800 p-4">
-        <Toggle enabled={socialProof.enabled} onToggle={() => updateConfig("socialProof", { enabled: !socialProof.enabled })} label="Pop-up de inscrições recentes" description="Mostra 'X acabou de se inscrever' para os participantes" />
+        <SwitchRow
+          enabled={socialProof.enabled}
+          onToggle={() => updateConfig("socialProof", { enabled: !socialProof.enabled })}
+          label="Pop-up de inscrições recentes"
+          description="Mostra 'X acabou de se inscrever' para os participantes"
+        />
         {socialProof.enabled && (
           <>
             <div className="space-y-1.5">
@@ -69,7 +61,12 @@ export function SocialProofPanel() {
 
       {/* Contador captura */}
       <div className="space-y-4 rounded-lg border border-slate-800 p-4">
-        <Toggle enabled={captureCounter.enabled} onToggle={() => updateConfig("captureCounter", { enabled: !captureCounter.enabled })} label="Contador de inscritos na captura" description="Ex: Mais de 1.200 pessoas já se inscreveram" />
+        <SwitchRow
+          enabled={captureCounter.enabled}
+          onToggle={() => updateConfig("captureCounter", { enabled: !captureCounter.enabled })}
+          label="Contador de inscritos na captura"
+          description="Ex: Mais de 1.200 pessoas já se inscreveram"
+        />
         {captureCounter.enabled && (
           <>
             <div className="flex gap-2">

@@ -328,6 +328,11 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
               primaryColor={
                 getTemplateById(templateId)?.config?.branding?.primaryColor ?? "#7C3AED"
               }
+              eventStartDate={startDate}
+              eventStartTime={startTime}
+              countdown={
+                (getTemplateById(templateId)?.config ?? getDefaultConfig()).countdown
+              }
               onChange={handleRegChange}
             />
           )}

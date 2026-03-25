@@ -1,17 +1,7 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/switch-row";
 import { useWebinarStore } from "@/store/useWebinarStore";
-
-function Toggle({ enabled, onToggle, label }: { enabled: boolean; onToggle: () => void; label: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <p className="text-sm font-medium text-slate-200">{label}</p>
-      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-slate-700"}`}>
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
-      </button>
-    </div>
-  );
-}
 
 export function FinishedPanel() {
   const { config, updateConfig } = useWebinarStore();
@@ -33,7 +23,11 @@ export function FinishedPanel() {
             placeholder="Obrigado por participar!" />
         </div>
 
-        <Toggle enabled={finished.showOfferButton} onToggle={() => updateConfig("finished", { showOfferButton: !finished.showOfferButton })} label="Exibir botão de oferta final" />
+        <SwitchRow
+          enabled={finished.showOfferButton}
+          onToggle={() => updateConfig("finished", { showOfferButton: !finished.showOfferButton })}
+          label="Exibir botão de oferta final"
+        />
 
         {finished.showOfferButton && (
           <>

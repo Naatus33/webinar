@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { type Sponsor } from "./SponsorsList";
 import { RegistrationPagePreview } from "./RegistrationPagePreview";
+import type { WebinarConfig } from "@/lib/webinar-templates";
 
 interface RegistrationPageTabProps {
   bgImage: string;
@@ -13,6 +14,9 @@ interface RegistrationPageTabProps {
   ctaText: string;
   sponsors: Sponsor[];
   primaryColor: string;
+  eventStartDate: string;
+  eventStartTime: string;
+  countdown: WebinarConfig["countdown"];
   onChange: (field: string, value: unknown) => void;
 }
 
@@ -25,6 +29,9 @@ export function RegistrationPageTab({
   ctaText,
   sponsors,
   primaryColor,
+  eventStartDate,
+  eventStartTime,
+  countdown,
   onChange,
 }: RegistrationPageTabProps) {
   const bgInputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +96,9 @@ export function RegistrationPageTab({
           ctaText={ctaText}
           sponsors={sponsors}
           primaryColor={primaryColor}
+          eventStartDate={eventStartDate}
+          eventStartTime={eventStartTime}
+          countdown={countdown}
           logoPosition="left"
           logoSize="md"
           overlayOpacity={0.5}

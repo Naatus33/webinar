@@ -1,20 +1,7 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/switch-row";
 import { useWebinarStore } from "@/store/useWebinarStore";
-
-function Toggle({ enabled, onToggle, label, description }: { enabled: boolean; onToggle: () => void; label: string; description?: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-slate-200">{label}</p>
-        {description && <p className="text-xs text-slate-500">{description}</p>}
-      </div>
-      <button type="button" onClick={onToggle} className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-slate-700"}`}>
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
-      </button>
-    </div>
-  );
-}
 
 export function ScarcityPanel() {
   const { config, updateConfig, setConfigField } = useWebinarStore();
@@ -28,7 +15,7 @@ export function ScarcityPanel() {
       </div>
 
       <div className="space-y-4 rounded-lg border border-slate-800 p-4">
-        <Toggle
+        <SwitchRow
           enabled={scarcity.enabled}
           onToggle={() => updateConfig("scarcity", { enabled: !scarcity.enabled })}
           label="Ativar banner de escassez"
@@ -59,7 +46,7 @@ export function ScarcityPanel() {
             </div>
 
             <div className="space-y-3 border-t border-slate-800 pt-3">
-              <Toggle
+              <SwitchRow
                 enabled={scarcity.timer.enabled}
                 onToggle={() => setConfigField(["scarcity", "timer", "enabled"], !scarcity.timer.enabled)}
                 label="Timer colorido"

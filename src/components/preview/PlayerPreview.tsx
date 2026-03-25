@@ -11,11 +11,7 @@ export function PlayerPreview() {
       {meta?.videoUrl ? (
         <iframe
           className="h-full w-full"
-          src={
-            meta.videoUrl.includes("youtube")
-              ? `https://www.youtube.com/embed/${extractYoutubeId(meta.videoUrl)}?rel=0`
-              : meta.videoUrl
-          }
+          src={videoEmbedSrc(meta.videoUrl)}
           allowFullScreen
           title="Preview do vídeo"
         />
@@ -31,7 +27,30 @@ export function PlayerPreview() {
   );
 }
 
+function videoEmbedSrc(url: string): string {
+  const u = url.trim();
+  if (u.includes("youtu.be") || u.includes("youtube.com")) {
+    const id = extractYoutubeId(u);
+    return id ? `https://www.youtube.com/embed/${id}?rel=0` : u;
+  }
+  if (u.includes("vimeo.com")) {
+    const id = extractVimeoId(u);
+    return id ? `https://player.vimeo.com/video/${id}` : u;
+  }
+  return u;
+}
+
 function extractYoutubeId(url: string) {
   const match = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
   return match?.[1] ?? "";
+}
+
+/** Aceita página do Vimeo (vimeo.com/123) ou URL já no player. */
+function extractVimeoId(url: string): string | null {
+  const fromPlayer = url.match(/player\.vimeo\.com\/video\/(\d+)/);
+  if (fromPlayer) return fromPlayer[1];
+  const fromPath = url.match(
+    /vimeo\.com\/(?:channels\/[^/]+\/|groups\/[^/]+\/videos\/|video\/|showcase\/\d+\/video\/|)(\d+)/,
+  );
+  return fromPath?.[1] ?? null;
 }

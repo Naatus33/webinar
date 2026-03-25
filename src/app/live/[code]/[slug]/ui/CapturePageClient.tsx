@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle, Calendar } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { WebinarConfig } from "@/lib/webinar-templates";
 import {
   applyMergeFields,
   type PublicCopyOverrides,
 } from "@/lib/public-copy-personalization";
+import {
+  formatWebinarStartLabelPtBr,
+  webinarCountdownTarget,
+} from "@/lib/webinar-timing";
 
 interface Sponsor {
   name: string;
@@ -57,9 +61,6 @@ export function CapturePageClient({
   const [email, setEmail] = useState("");
   const [lgpd, setLgpd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [leadId, setLeadId] = useState<string | null>(null);
 
   const { branding, capturePage } = webinar.config;
   const primaryColor = branding.primaryColor;
@@ -135,9 +136,7 @@ export function CapturePageClient({
     if (!res.ok) return;
 
     const data = await res.json();
-    setLeadId(data.id);
     // O player/monitoramento usa sessionStorage para associar presença ao lead.
-    // Assim, após o cliente acessar "/{slug}", a captura cria o lead e o watch consegue vincular os pings.
     sessionStorage.setItem("lead_id", data.id);
     sessionStorage.setItem("lead_name", name);
     try {
@@ -145,10 +144,6 @@ export function CapturePageClient({
     } catch {
       // ignore
     }
-    setConfirmed(true);
-  }
-
-  function handleWatchNow() {
     const q = typeof window !== "undefined" ? window.location.search : "";
     router.push(`/live/${webinar.code}/${webinar.slug}/watch${q}`);
   }
@@ -172,17 +167,37 @@ export function CapturePageClient({
     ? applyMergeFields(copyOverrides.subtitle, mergeCtx)
     : null;
 
-  function buildGoogleCalendarUrl() {
-    if (!webinar.startDate) return null;
-    const start = new Date(webinar.startDate);
-    if (webinar.startTime) {
-      const [h, m] = webinar.startTime.split(":");
-      start.setHours(parseInt(h), parseInt(m));
+  const eventStartLabel = formatWebinarStartLabelPtBr(webinar.startDate, webinar.startTime);
+  const showCaptureTopBanner =
+    Boolean(
+      webinar.config.countdown.enabled &&
+        webinar.config.countdown.showOnCapture &&
+        webinar.startDate,
+    ) || Boolean(eventStartLabel);
+
+  const dateOnlyCountdown =
+    Boolean(webinar.startDate) && !webinar.startTime?.trim();
+
+  const [minutesUntilStart, setMinutesUntilStart] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!dateOnlyCountdown) {
+      setMinutesUntilStart(null);
+      return;
     }
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-    const fmt = (d: Date) => d.toISOString().replace(/-|:|\.\d{3}/g, "");
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(webinar.name)}&dates=${fmt(start)}/${fmt(end)}&details=${encodeURIComponent(`Acesse: ${window.location.origin}/live/${webinar.code}/${webinar.slug}/watch`)}`;
-  }
+    const target = webinarCountdownTarget(webinar.startDate, webinar.startTime);
+    if (!target) {
+      setMinutesUntilStart(null);
+      return;
+    }
+    function tick() {
+      const ms = target.getTime() - Date.now();
+      setMinutesUntilStart(Math.max(0, Math.ceil(ms / 60_000)));
+    }
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, [dateOnlyCountdown, webinar.startDate, webinar.startTime]);
 
   // Tela de senha
   if (!passwordOk) {
@@ -211,42 +226,12 @@ export function CapturePageClient({
     );
   }
 
-  // Tela de confirmação
-  if (confirmed) {
-    const calUrl = buildGoogleCalendarUrl();
-    return (
-      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: webinar.config.layout.bgColor }}>
-        <div className="w-full max-w-md rounded-2xl bg-white/10 p-8 text-center backdrop-blur-md">
-          <CheckCircle className="mx-auto mb-4 h-12 w-12 text-emerald-400" />
-          <h2 className="mb-1 text-xl font-bold text-white">Você está inscrito!</h2>
-          {webinar.startDate && (
-            <p className="mb-5 text-sm text-white/70">
-              O webinar começa em{" "}
-              {new Date(webinar.startDate).toLocaleDateString("pt-BR")}
-              {webinar.startTime && ` às ${webinar.startTime}`}
-            </p>
-          )}
-          {calUrl && (
-            <a href={calUrl} target="_blank" rel="noopener noreferrer"
-              className="mb-3 flex items-center justify-center gap-2 rounded-lg border border-white/20 px-4 py-2.5 text-sm text-white hover:bg-white/10">
-              <Calendar className="h-4 w-4" /> Adicionar ao Google Calendar
-            </a>
-          )}
-          <button onClick={handleWatchNow}
-            className="mt-2 flex h-10 w-full items-center justify-center rounded-lg font-medium text-white"
-            style={{ backgroundColor: primaryColor }}>
-            Assistir agora
-          </button>
-          <p className="mt-3 text-xs text-white/50">Enviamos um e-mail de confirmação para você.</p>
-        </div>
-      </div>
-    );
-  }
-
   // Página de captura principal
   return (
     <div
-      className="relative flex min-h-screen items-center justify-center p-4"
+      className={`relative flex min-h-screen items-center justify-center p-4 ${
+        showCaptureTopBanner ? "pt-24 sm:pt-28" : ""
+      } ${dateOnlyCountdown ? "pb-10 sm:pb-12" : ""}`}
       style={{
         backgroundImage: webinar.regBgImage ? `url(${webinar.regBgImage})` : undefined,
         backgroundSize: "cover",
@@ -261,14 +246,60 @@ export function CapturePageClient({
         />
       )}
 
-      {/* Countdown */}
-      {webinar.config.countdown.enabled && webinar.config.countdown.showOnCapture && webinar.startDate && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 text-center">
-          <p className="text-sm text-white/70">{webinar.config.countdown.message}</p>
+      {/* Contagem + data/hora de início (alinhado ao preview do wizard) */}
+      {showCaptureTopBanner && (
+        <div className="absolute top-4 left-1/2 z-10 w-[90%] max-w-xl -translate-x-1/2 space-y-1 text-center">
+          {webinar.config.countdown.enabled &&
+            webinar.config.countdown.showOnCapture &&
+            webinar.startDate && (
+              <p className="text-sm text-white/80">{webinar.config.countdown.message}</p>
+            )}
+          {eventStartLabel && (
+            <p className="text-xs text-white/65">Início: {eventStartLabel}</p>
+          )}
         </div>
       )}
 
-      <div className="relative z-10 flex w-full max-w-3xl gap-5 flex-col sm:flex-row">
+      <div
+        className={`relative z-10 flex w-full max-w-3xl flex-col items-stretch gap-6 sm:items-center ${
+          dateOnlyCountdown && minutesUntilStart !== null ? "sm:gap-8" : ""
+        }`}
+      >
+        {dateOnlyCountdown && minutesUntilStart !== null && (
+          <div className="w-full rounded-2xl border border-white/20 bg-black/25 px-4 py-8 text-center shadow-[0_0_60px_rgba(0,0,0,0.35)] backdrop-blur-md sm:px-8 sm:py-10">
+            {minutesUntilStart > 0 ? (
+              <>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/55 sm:text-xs">
+                  Faltam
+                </p>
+                <p
+                  className="my-2 text-6xl font-black tabular-nums leading-none tracking-tight text-white sm:text-7xl md:text-8xl"
+                  style={{ textShadow: "0 4px 40px rgba(0,0,0,0.45)" }}
+                >
+                  {minutesUntilStart.toLocaleString("pt-BR")}
+                </p>
+                <p className="text-lg font-medium text-white/85 sm:text-xl">minutos</p>
+                {eventStartLabel && (
+                  <p className="mt-4 text-sm text-white/55">até o início do dia do evento ({eventStartLabel})</p>
+                )}
+              </>
+            ) : (
+              <>
+                <p
+                  className="text-4xl font-black tracking-tight text-white sm:text-5xl md:text-6xl"
+                  style={{ textShadow: "0 4px 40px rgba(0,0,0,0.45)" }}
+                >
+                  É hoje!
+                </p>
+                <p className="mx-auto mt-3 max-w-md text-sm text-white/70">
+                  Dia do evento — o horário exato pode ser divulgado em breve. Fique atento ao e-mail.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className="flex w-full gap-5 flex-col sm:flex-row">
         {/* Left card */}
         <div className="flex flex-1 flex-col gap-4 rounded-2xl bg-white/10 p-6 backdrop-blur-sm text-white">
           {webinar.regLogoUrl ? (
@@ -355,6 +386,7 @@ export function CapturePageClient({
             {loading ? "Aguarde..." : webinar.regCtaText || "Ir para o webinar!"}
           </button>
         </form>
+        </div>
       </div>
     </div>
   );

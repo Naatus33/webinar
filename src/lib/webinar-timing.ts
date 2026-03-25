@@ -22,6 +22,45 @@ export function webinarStartDateTime(
   return new Date(yy, mm - 1, dd, hh, mi, 0, 0);
 }
 
+/**
+ * Instante usado para contagem regressiva quando só existe data: meia-noite (00:00) do dia do evento no fuso local.
+ * Com horário definido, equivale a `webinarStartDateTime`.
+ */
+export function webinarCountdownTarget(
+  startDate: string | Date | null | undefined,
+  startTime: string | null | undefined,
+): Date | null {
+  if (!startDate) return null;
+  const fallback = startTime?.trim() ? startTime.trim() : "00:00";
+  return webinarStartDateTime(startDate, fallback);
+}
+
+/** Texto único para UI (captura, confirmação, preview do wizard) — evita `new Date(iso UTC)` trocar o dia. */
+export function formatWebinarStartLabelPtBr(
+  startDate: string | Date | null | undefined,
+  startTime: string | null | undefined,
+): string | null {
+  if (!startDate) return null;
+  const iso =
+    typeof startDate === "string"
+      ? startDate
+      : startDate.toISOString?.() ?? String(startDate);
+  const datePart = iso.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
+  const [yy, mm, dd] = datePart.split("-").map((x) => parseInt(x, 10));
+  if (Number.isNaN(yy) || Number.isNaN(mm) || Number.isNaN(dd)) return null;
+  const d = new Date(yy, mm - 1, dd);
+  let text = d.toLocaleDateString("pt-BR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const tm = startTime?.trim();
+  if (tm) text += ` às ${tm}`;
+  return text;
+}
+
 export type WatchPhase = "waiting" | "live" | "replay";
 
 export function computePublicWatchPhase(args: {
@@ -31,7 +70,7 @@ export function computePublicWatchPhase(args: {
   status: string;
 }): { phase: WatchPhase; secondsUntilStart: number | null; secondsSinceStart: number } {
   const { replayEnabled, status } = args;
-  const start = webinarStartDateTime(args.startDate, args.startTime);
+  const start = webinarCountdownTarget(args.startDate, args.startTime);
   const now = Date.now();
 
   if (status === "LIVE") {

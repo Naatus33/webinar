@@ -3,6 +3,8 @@
 import type { WheelEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SponsorsList, type Sponsor } from "./SponsorsList";
+import type { WebinarConfig } from "@/lib/webinar-templates";
+import { formatWebinarStartLabelPtBr } from "@/lib/webinar-timing";
 
 interface RegistrationPagePreviewProps {
   bgImage?: string;
@@ -13,6 +15,10 @@ interface RegistrationPagePreviewProps {
   ctaText?: string;
   sponsors?: Sponsor[];
   primaryColor?: string;
+  /** Data/hora de início (mesmas props do webinar) — sincroniza com Configurações gerais */
+  eventStartDate?: string;
+  eventStartTime?: string;
+  countdown?: WebinarConfig["countdown"];
   logoPosition?: "left" | "center";
   logoSize?: "sm" | "md" | "lg";
   overlayOpacity?: number;
@@ -33,6 +39,9 @@ export function RegistrationPagePreview({
   ctaText,
   sponsors = [],
   primaryColor = "#7C3AED",
+  eventStartDate,
+  eventStartTime,
+  countdown,
   logoSize = "md",
   overlayOpacity = 0.5,
   onLogoPick,
@@ -122,6 +131,14 @@ export function RegistrationPagePreview({
     [descriptionSafe]
   );
 
+  const eventStartLabel = useMemo(
+    () => formatWebinarStartLabelPtBr(eventStartDate || null, eventStartTime || null),
+    [eventStartDate, eventStartTime],
+  );
+
+  const showCountdownBanner =
+    Boolean(countdown?.enabled && countdown?.showOnCapture && eventStartDate);
+
   function commitTitle() {
     setEditingTitle(false);
     onTitleChange?.(titleDraft);
@@ -145,7 +162,9 @@ export function RegistrationPagePreview({
 
   return (
     <div
-      className="relative flex min-h-[360px] w-full items-center justify-center overflow-hidden rounded-xl p-3 sm:min-h-[420px] sm:p-6"
+      className={`relative flex min-h-[360px] w-full items-center justify-center overflow-hidden rounded-xl p-3 sm:min-h-[420px] sm:p-6 ${
+        showCountdownBanner || eventStartLabel ? "pt-12 sm:pt-14" : ""
+      }`}
       style={{
         backgroundImage: bgImage ? `url(${bgImage})` : undefined,
         backgroundSize: "cover",
@@ -159,6 +178,21 @@ export function RegistrationPagePreview({
           className="absolute inset-0"
           style={{ backgroundColor: `rgba(0,0,0,${overlayOpacity})` }}
         />
+      )}
+
+      {(showCountdownBanner || eventStartLabel) && (
+        <div className="pointer-events-none absolute left-1/2 top-2 z-20 w-[92%] max-w-lg -translate-x-1/2 space-y-0.5 text-center">
+          {showCountdownBanner && (
+            <p className="text-[11px] font-medium text-white/95 drop-shadow-sm sm:text-xs">
+              {countdown!.message}
+            </p>
+          )}
+          {eventStartLabel && (
+            <p className="text-[10px] text-white/80 drop-shadow-sm sm:text-[11px]">
+              Início: {eventStartLabel}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="relative z-10 flex w-full max-w-2xl min-w-0 gap-2 sm:gap-4">

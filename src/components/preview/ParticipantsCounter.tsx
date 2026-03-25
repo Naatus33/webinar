@@ -11,20 +11,21 @@ export function ParticipantsCounter() {
   // Inicializa com null para evitar hydration mismatch (Math.random() no servidor ≠ cliente)
   const [count, setCount] = useState<number | null>(null);
 
-  // #region agent log
   useEffect(() => {
-    fetch('http://127.0.0.1:7890/ingest/61bd3893-904e-42a5-a9f0-b0555de820c3',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f0bdc6'},body:JSON.stringify({sessionId:'f0bdc6',location:'ParticipantsCounter.tsx:useEffect-init',message:'Initial count set on client only',data:{min:participants.min,max:participants.max},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    
     let isMounted = true;
-    setTimeout(() => {
-        if (isMounted) {
-            const initial = Math.floor(Math.random() * (participants.max - participants.min + 1)) + participants.min;
-            setCount(initial);
-        }
+    const t = setTimeout(() => {
+      if (isMounted) {
+        const initial =
+          Math.floor(Math.random() * (participants.max - participants.min + 1)) +
+          participants.min;
+        setCount(initial);
+      }
     }, 0);
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      clearTimeout(t);
+    };
   }, [participants.min, participants.max]);
-  // #endregion
 
   useEffect(() => {
     if (!participants.autoVariation) return;

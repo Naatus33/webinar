@@ -1,5 +1,7 @@
 "use client";
 
+import { Switch } from "@/components/ui/switch";
+
 interface AdvancedSettingsTabProps {
   redirectEnabled: boolean;
   redirectUrl: string;
@@ -9,24 +11,6 @@ interface AdvancedSettingsTabProps {
   lgpdEnabled: boolean;
   lgpdText: string;
   onChange: (field: string, value: unknown) => void;
-}
-
-function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${
-        enabled ? "bg-primary" : "bg-slate-700"
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-          enabled ? "translate-x-4" : "translate-x-0.5"
-        }`}
-      />
-    </button>
-  );
 }
 
 export function AdvancedSettingsTab({
@@ -54,7 +38,12 @@ export function AdvancedSettingsTab({
               <p className="text-sm font-medium text-slate-200">Redirecionar após o webinar</p>
               <p className="text-xs text-slate-500">Enviar o participante para uma URL ao finalizar</p>
             </div>
-            <Toggle enabled={redirectEnabled} onToggle={() => onChange("redirectEnabled", !redirectEnabled)} />
+            <Switch
+              enabled={redirectEnabled}
+              onToggle={() => onChange("redirectEnabled", !redirectEnabled)}
+              aria-label="Redirecionar após o webinar"
+              className="shrink-0 motion-transition"
+            />
           </div>
           {redirectEnabled && (
             <input
@@ -74,7 +63,12 @@ export function AdvancedSettingsTab({
               <p className="text-sm font-medium text-slate-200">Proteger com senha</p>
               <p className="text-xs text-slate-500">Exigir senha para acessar a página de captura</p>
             </div>
-            <Toggle enabled={passwordEnabled} onToggle={() => onChange("passwordEnabled", !passwordEnabled)} />
+            <Switch
+              enabled={passwordEnabled}
+              onToggle={() => onChange("passwordEnabled", !passwordEnabled)}
+              aria-label="Proteger com senha"
+              className="shrink-0 motion-transition"
+            />
           </div>
           {passwordEnabled && (
             <input
@@ -93,7 +87,12 @@ export function AdvancedSettingsTab({
             <p className="text-sm font-medium text-slate-200">Habilitar replay</p>
             <p className="text-xs text-slate-500">Permite assistir ao webinar após o término</p>
           </div>
-          <Toggle enabled={replayEnabled} onToggle={() => onChange("replayEnabled", !replayEnabled)} />
+          <Switch
+            enabled={replayEnabled}
+            onToggle={() => onChange("replayEnabled", !replayEnabled)}
+            aria-label="Habilitar replay"
+            className="shrink-0 motion-transition"
+          />
         </div>
 
         {/* LGPD */}
@@ -103,7 +102,12 @@ export function AdvancedSettingsTab({
               <p className="text-sm font-medium text-slate-200">Consentimento LGPD</p>
               <p className="text-xs text-slate-500">Exibir checkbox de consentimento no formulário</p>
             </div>
-            <Toggle enabled={lgpdEnabled} onToggle={() => onChange("lgpdEnabled", !lgpdEnabled)} />
+            <Switch
+              enabled={lgpdEnabled}
+              onToggle={() => onChange("lgpdEnabled", !lgpdEnabled)}
+              aria-label="Consentimento LGPD"
+              className="shrink-0 motion-transition"
+            />
           </div>
           {lgpdEnabled && (
             <textarea

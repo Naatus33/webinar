@@ -3,13 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import type { WebinarConfig } from "./webinar-templates";
 
-type ChatMessage = {
+export type ChatMessage = {
   id: string;
   author: string;
   content: string;
+  type: string;
+  replyToContent: string | null;
+  replyToAuthor: string | null;
   pinned: boolean;
   timestamp: number | null;
   createdAt: string;
+  /** Total de curtidas (servidor). */
+  likeCount?: number;
+  /** Se este viewer já curtiu (precisa `viewerKey` na URL do stream). */
+  heartLiked?: boolean;
 };
 
 type PollOption = {
@@ -31,30 +38,42 @@ type Spots = {
   show: boolean;
 };
 
+export type OnlineLead = {
+  name: string;
+  email: string;
+  lastSeenAt: string | null;
+  online: boolean;
+};
+
 type WebinarSnapshot = {
   messages: ChatMessage[];
   polls: Poll[];
   status: string;
   config: WebinarConfig;
   spots: Spots;
+  viewerCount: number;
+  liveConnections: number;
+  onlineLeads: OnlineLead[];
 };
 
 export function useWebinarSse(
   webinarId: string,
   enabled: boolean,
   intervalMs?: number,
+  /** Chave estável por aba para curtidas sincronizarem e o servidor saber se você já curtiu. */
+  viewerKey?: string | null,
 ) {
   const [data, setData] = useState<WebinarSnapshot | null>(null);
   const [connected, setConnected] = useState(false);
   const resolvedIntervalMs = intervalMs ?? 2500;
 
-  const url = useMemo(
-    () =>
-      enabled
-        ? `/api/webinars/${webinarId}/stream?intervalMs=${resolvedIntervalMs}`
-        : null,
-    [enabled, webinarId, resolvedIntervalMs],
-  );
+  const url = useMemo(() => {
+    if (!enabled) return null;
+    const q = new URLSearchParams();
+    q.set("intervalMs", String(resolvedIntervalMs));
+    if (viewerKey?.trim()) q.set("viewerKey", viewerKey.trim());
+    return `/api/webinars/${webinarId}/stream?${q.toString()}`;
+  }, [enabled, webinarId, resolvedIntervalMs, viewerKey]);
 
   useEffect(() => {
     if (!url) return;
@@ -88,12 +107,15 @@ export function useWebinarSse(
     };
   }, [url]);
 
-  return { 
-    messages: data?.messages ?? [], 
+  return {
+    messages: data?.messages ?? [],
     polls: data?.polls ?? [],
     status: data?.status,
     config: data?.config,
     spots: data?.spots ?? { count: 0, total: 0, show: false },
-    connected 
+    viewerCount: data?.viewerCount ?? 0,
+    liveConnections: data?.liveConnections ?? 0,
+    onlineLeads: data?.onlineLeads ?? [],
+    connected,
   };
 }

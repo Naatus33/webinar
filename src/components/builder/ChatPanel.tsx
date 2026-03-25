@@ -2,36 +2,7 @@
 
 import { useWebinarStore } from "@/store/useWebinarStore";
 import { SectionCard } from "@/components/ui/section-card";
-import { Switch } from "@/components/ui/switch";
-
-function RowToggle({
-  enabled,
-  onToggle,
-  label,
-  description,
-}: {
-  enabled: boolean;
-  onToggle: () => void;
-  label: string;
-  description?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        {description ? (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
-      <Switch
-        enabled={enabled}
-        onToggle={onToggle}
-        aria-label={label}
-        className="motion-transition shrink-0"
-      />
-    </div>
-  );
-}
+import { SwitchRow } from "@/components/ui/switch-row";
 
 export function ChatPanel() {
   const { config, updateConfig } = useWebinarStore();
@@ -43,7 +14,7 @@ export function ChatPanel() {
         title="Chat ao vivo"
         description="Controle visibilidade, modo e permissões de envio."
       >
-        <RowToggle
+        <SwitchRow
           enabled={chat.enabled}
           onToggle={() => updateConfig("chat", { enabled: !chat.enabled })}
           label="Ativar chat"
@@ -84,7 +55,7 @@ export function ChatPanel() {
               </p>
             </div>
 
-            <RowToggle
+            <SwitchRow
               enabled={chat.readonly}
               onToggle={() => updateConfig("chat", { readonly: !chat.readonly })}
               label="Somente leitura"
