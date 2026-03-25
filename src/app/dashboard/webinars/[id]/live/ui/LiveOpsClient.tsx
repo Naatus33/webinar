@@ -148,6 +148,8 @@ export function LiveOpsClient({
   const [msgType, setMsgType] = useState<MsgType>("normal");
   const [replyingTo, setReplyingTo] = useState<{ id: string; author: string; content: string } | null>(null);
   const [sendingChat, setSendingChat] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [loadingAiSuggestions, setLoadingAiSuggestions] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -165,14 +167,20 @@ export function LiveOpsClient({
   const [selectedShareLead, setSelectedShareLead] = useState<{ name: string; email: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Scarcity button auto-timer
+  // Scarcity button auto-timer com sistema de semáforo (Verde → Amarelo → Laranja → Vermelho)
   const scarcityBtn = (config as any).scarcityButton ?? { enabled: false, color: "green", label: "Garanta sua vaga!", autoTimer: false, timerSeconds: 60 };
-  const scarcityColorOrder: ("green" | "yellow" | "red")[] = ["green", "yellow", "red"];
+  const scarcityColorOrder: ("green" | "yellow" | "orange" | "red")[] = ["green", "yellow", "orange", "red"];
+  const scarcityColorMap = {
+    green: { bg: "bg-emerald-500", border: "border-emerald-500", text: "text-emerald-400", label: "Verde" },
+    yellow: { bg: "bg-amber-500", border: "border-amber-500", text: "text-amber-400", label: "Amarelo" },
+    orange: { bg: "bg-orange-500", border: "border-orange-500", text: "text-orange-400", label: "Laranja" },
+    red: { bg: "bg-red-500", border: "border-red-500", text: "text-red-400", label: "Vermelho" },
+  };
   useEffect(() => {
     if (!scarcityBtn.enabled || !scarcityBtn.autoTimer) return;
     const interval = setInterval(() => {
-      const idx = scarcityColorOrder.indexOf(scarcityBtn.color);
-      const next = scarcityColorOrder[(idx + 1) % 3];
+      const idx = scarcityColorOrder.indexOf(scarcityBtn.color as any);
+      const next = scarcityColorOrder[(idx + 1) % 4];
       updateConfig({ scarcityButton: { ...scarcityBtn, color: next } } as any);
     }, (scarcityBtn.timerSeconds || 60) * 1000);
     return () => clearInterval(interval);
@@ -235,10 +243,35 @@ export function LiveOpsClient({
 
   const adminName = (config as any).adminAvatar?.displayName || "Administrador";
 
+  // Buscar sugestões de resposta com IA
+  async function fetchAiSuggestions() {
+    if (!chatInput.trim()) return;
+    setLoadingAiSuggestions(true);
+    try {
+      const res = await fetch(`/api/webinars/${webinarId}/chat/suggest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          context: chatInput.slice(0, 500),
+          recentMessages: messages.slice(-5).map(m => `${m.author}: ${m.content}`).join("\n"),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiSuggestions(data.suggestions || []);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar sugestões de IA:", err);
+    } finally {
+      setLoadingAiSuggestions(false);
+    }
+  }
+
   async function sendChatMessage() {
     if (!chatInput.trim() || sendingChat) return;
     const content = chatInput.trim();
     setChatInput("");
+    setAiSuggestions([]);
     setSendingChat(true);
     try {
       const body: any = {
@@ -331,6 +364,11 @@ export function LiveOpsClient({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  // Identificar hot leads (líderes quentes com engajamento)
+  const hotLeads = useMemo(() => {
+    return onlineLeads.filter(l => (l as any).engagement > 70 || (l as any).interactions > 5);
+  }, [onlineLeads]);
+
   const filteredLeads = useMemo(() => {
     if (!leadSearch) return onlineLeads;
     const q = leadSearch.toLowerCase();
@@ -338,6 +376,7 @@ export function LiveOpsClient({
   }, [onlineLeads, leadSearch]);
 
   const onlineCount = onlineLeads.filter(l => l.online).length;
+  const hotLeadsCount = hotLeads.length;
 
   const adminAvatarUrl = (config as any).adminAvatar?.logoUrl;
 
@@ -452,18 +491,30 @@ export function LiveOpsClient({
             <div className="flex-1 overflow-y-auto scrollbar-hide min-h-0 space-y-0.5">
               {filteredLeads.length === 0
                 ? <p className="text-[10px] text-slate-700 text-center py-4">Nenhum lead</p>
-                : filteredLeads.map((lead, i) => (
-                  <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-900/60 transition-all">
-                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${lead.online ? "bg-emerald-500 animate-pulse" : "bg-slate-700"}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold text-white truncate leading-none">{lead.name}</p>
-                      <p className="text-[9px] text-slate-600 truncate">{lead.email}</p>
+                : filteredLeads.map((lead, i) => {
+                  const isHotLead = hotLeads.some(h => h.email === lead.email);
+                  return (
+                    <div key={i} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all ${
+                      isHotLead ? "bg-emerald-500/10 border border-emerald-500/30" : "hover:bg-slate-900/60"
+                    }`}>
+                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                        lead.online ? "bg-emerald-500 animate-pulse" : "bg-slate-700"
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <p className="text-[10px] font-bold text-white truncate leading-none">{lead.name}</p>
+                          {isHotLead && <Sparkles className="h-2.5 w-2.5 text-emerald-400 shrink-0" />}
+                        </div>
+                        <p className="text-[9px] text-slate-600 truncate">{lead.email}</p>
+                      </div>
+                      <span className={`text-[8px] font-bold shrink-0 ${
+                        lead.online ? "text-emerald-500" : "text-slate-700"
+                      }`}>
+                        {lead.online ? (lead.lastSeenAt ? `${Math.round((Date.now() - new Date(lead.lastSeenAt).getTime()) / 1000)}s` : "●") : "—"}
+                      </span>
                     </div>
-                    <span className={`text-[8px] font-bold shrink-0 ${lead.online ? "text-emerald-500" : "text-slate-700"}`}>
-                      {lead.online ? (lead.lastSeenAt ? `${Math.round((Date.now() - new Date(lead.lastSeenAt).getTime()) / 1000)}s` : "●") : "—"}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </div>
 
@@ -610,6 +661,7 @@ export function LiveOpsClient({
               <div className="flex gap-1.5">
                 <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
+                  onFocus={fetchAiSuggestions}
                   placeholder={`Enviar como ${adminName}...`}
                   className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 placeholder:text-slate-600" />
                 <button onClick={sendChatMessage} disabled={!chatInput.trim() || sendingChat}
@@ -617,6 +669,17 @@ export function LiveOpsClient({
                   <Send className="h-3.5 w-3.5 text-white" />
                 </button>
               </div>
+              {aiSuggestions.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Sugestões de IA</p>
+                  {aiSuggestions.map((suggestion, idx) => (
+                    <button key={idx} onClick={() => { setChatInput(suggestion); setAiSuggestions([]); }}
+                      className="w-full text-left text-[10px] p-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white transition-all border border-slate-700/50 truncate">
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -668,7 +731,7 @@ export function LiveOpsClient({
                 </div>
               </div>
 
-              {/* Botão Escassez */}
+              {/* Botão Escassez com Sistema de Semáforo */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">Botão Escassez</p>

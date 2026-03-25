@@ -191,6 +191,7 @@ export function CapturePageClient({
       return;
     }
     function tick() {
+      if (!target) return;
       const ms = target.getTime() - Date.now();
       setMinutesUntilStart(Math.max(0, Math.ceil(ms / 60_000)));
     }

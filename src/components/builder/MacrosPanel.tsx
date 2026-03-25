@@ -12,6 +12,13 @@ interface Macro {
   text: string;
   action: MacroAction;
   pin: boolean;
+  timing?: {
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalSeconds: number;
+  };
+  isFake?: boolean;
 }
 
 export function MacrosPanel() {
@@ -19,6 +26,9 @@ export function MacrosPanel() {
   const macros = (storeMacros as Macro[]) || [];
 
   const [editing, setEditing] = useState<Macro | null>(null);
+  const [csvInput, setCsvInput] = useState("");
+  const [showCsvImport, setShowCsvImport] = useState(false);
+  const [importingCsv, setImportingCsv] = useState(false);
 
   const addMacro = () => {
     const newMacro: Macro = {
@@ -27,6 +37,7 @@ export function MacrosPanel() {
       text: "Olá {{name}}! Bem-vindo ao webinar.",
       action: "none",
       pin: false,
+      timing: { hours: 0, minutes: 0, seconds: 0, totalSeconds: 0 },
     };
     updateWebinar({ macros: [...macros, newMacro] });
   };
@@ -41,6 +52,28 @@ export function MacrosPanel() {
     });
   };
 
+  const importMacrosFromCsv = async () => {
+    if (!csvInput.trim()) return;
+    setImportingCsv(true);
+    try {
+      const response = await fetch(`/api/webinars/[id]/macros/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csvContent: csvInput }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        updateWebinar({ macros: [...macros, ...data.macros] });
+        setCsvInput("");
+        setShowCsvImport(false);
+      }
+    } catch (err) {
+      console.error("Erro ao importar CSV:", err);
+    } finally {
+      setImportingCsv(false);
+    }
+  };
+
   return (
     <div className="space-y-6 p-1">
       <header className="flex items-center justify-between">
@@ -48,13 +81,54 @@ export function MacrosPanel() {
           <h3 className="text-sm font-bold text-foreground">Macros de Operação</h3>
           <p className="text-[11px] text-muted-foreground">Configure atalhos para o seu Pitch de Vendas.</p>
         </div>
-        <button
-          onClick={addMacro}
-          className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:brightness-110"
-        >
-          <Plus className="h-3.5 w-3.5" /> Adicionar
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCsvImport(!showCsvImport)}
+            className="flex h-8 items-center gap-1.5 rounded-lg bg-slate-700 px-3 text-xs font-bold text-white hover:bg-slate-600"
+          >
+            <Save className="h-3.5 w-3.5" /> Importar CSV
+          </button>
+          <button
+            onClick={addMacro}
+            className="flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:brightness-110"
+          >
+            <Plus className="h-3.5 w-3.5" /> Adicionar
+          </button>
+        </div>
       </header>
+
+      {showCsvImport && (
+        <div className="rounded-xl border border-border bg-card/50 p-4 space-y-3">
+          <div>
+            <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Cole o CSV (formato: hora,minuto,segundo,nome,mensagem)
+            </label>
+            <textarea
+              value={csvInput}
+              onChange={(e) => setCsvInput(e.target.value)}
+              rows={4}
+              placeholder="0,0,30,Saudação,Olá pessoal!
+0,2,15,Pitch,Confira nossa oferta"
+              className="w-full rounded-lg border border-border bg-background p-3 text-xs outline-none focus:border-primary"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={importMacrosFromCsv}
+              disabled={importingCsv || !csvInput.trim()}
+              className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:brightness-110 disabled:opacity-50"
+            >
+              {importingCsv ? "Importando..." : "Importar"}
+            </button>
+            <button
+              onClick={() => { setCsvInput(""); setShowCsvImport(false); }}
+              className="flex-1 rounded-lg bg-slate-700 px-3 py-2 text-xs font-bold text-white hover:bg-slate-600"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         {macros.length === 0 && (
@@ -99,6 +173,62 @@ export function MacrosPanel() {
                 />
               </div>
 
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Timing Preciso (H:M:S)
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={macro.timing?.hours ?? 0}
+                    onChange={(e) => {
+                      const h = parseInt(e.target.value) || 0;
+                      const m = macro.timing?.minutes ?? 0;
+                      const s = macro.timing?.seconds ?? 0;
+                      updateMacro(macro.id, {
+                        timing: { hours: h, minutes: m, seconds: s, totalSeconds: h * 3600 + m * 60 + s },
+                      });
+                    }}
+                    className="rounded-lg border border-border bg-background p-2 text-xs outline-none focus:border-primary"
+                    placeholder="H"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={macro.timing?.minutes ?? 0}
+                    onChange={(e) => {
+                      const h = macro.timing?.hours ?? 0;
+                      const m = parseInt(e.target.value) || 0;
+                      const s = macro.timing?.seconds ?? 0;
+                      updateMacro(macro.id, {
+                        timing: { hours: h, minutes: m, seconds: s, totalSeconds: h * 3600 + m * 60 + s },
+                      });
+                    }}
+                    className="rounded-lg border border-border bg-background p-2 text-xs outline-none focus:border-primary"
+                    placeholder="M"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={macro.timing?.seconds ?? 0}
+                    onChange={(e) => {
+                      const h = macro.timing?.hours ?? 0;
+                      const m = macro.timing?.minutes ?? 0;
+                      const s = parseInt(e.target.value) || 0;
+                      updateMacro(macro.id, {
+                        timing: { hours: h, minutes: m, seconds: s, totalSeconds: h * 3600 + m * 60 + s },
+                      });
+                    }}
+                    className="rounded-lg border border-border bg-background p-2 text-xs outline-none focus:border-primary"
+                    placeholder="S"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -129,10 +259,15 @@ export function MacrosPanel() {
               </div>
             </div>
 
-            <div className="mt-4 flex items-center gap-2 border-t border-border/50 pt-3">
+            <div className="mt-4 flex items-center gap-2 border-t border-border/50 pt-3 flex-wrap">
               <div className="flex items-center gap-1.5 rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
                 <MessageCircle className="h-3 w-3" /> Chat
               </div>
+              {macro.timing && macro.timing.totalSeconds > 0 && (
+                <div className="flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-600">
+                  <AlertTriangle className="h-3 w-3" /> {String(macro.timing.hours).padStart(2, "0")}:{String(macro.timing.minutes).padStart(2, "0")}:{String(macro.timing.seconds).padStart(2, "0")}
+                </div>
+              )}
               {macro.pin && (
                 <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-600">
                   <Pin className="h-3 w-3" /> Fixar
