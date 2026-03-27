@@ -10,6 +10,7 @@ interface Macro {
   id: string;
   label: string;
   text: string;
+  fakeName?: string;
   action: MacroAction;
   pin: boolean;
   timing?: {
@@ -18,7 +19,6 @@ interface Macro {
     seconds: number;
     totalSeconds: number;
   };
-  isFake?: boolean;
 }
 
 export function MacrosPanel() {
@@ -101,14 +101,14 @@ export function MacrosPanel() {
         <div className="rounded-xl border border-border bg-card/50 p-4 space-y-3">
           <div>
             <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Cole o CSV (formato: hora,minuto,segundo,nome,mensagem)
+              Cole o CSV (formato: hora,minuto,segundo,nome_fake,mensagem)
             </label>
             <textarea
               value={csvInput}
               onChange={(e) => setCsvInput(e.target.value)}
               rows={4}
-              placeholder="0,0,30,Saudação,Olá pessoal!
-0,2,15,Pitch,Confira nossa oferta"
+              placeholder="0,0,30,Maria Silva,Que conteúdo incrível!
+0,2,15,João Santos,Como garanto minha vaga?"
               className="w-full rounded-lg border border-border bg-background p-3 text-xs outline-none focus:border-primary"
             />
           </div>
@@ -170,6 +170,19 @@ export function MacrosPanel() {
                   rows={3}
                   className="w-full rounded-lg border border-border bg-background p-3 text-xs outline-none focus:border-primary"
                   placeholder="Use {{name}} para o nome do participante..."
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Nome do Cliente Fake
+                </label>
+                <input
+                  type="text"
+                  value={macro.fakeName ?? ""}
+                  onChange={(e) => updateMacro(macro.id, { fakeName: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-background p-3 text-xs outline-none focus:border-primary"
+                  placeholder="Deixe vazio para usar seu nome de admin"
                 />
               </div>
 

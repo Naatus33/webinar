@@ -26,5 +26,6 @@ describe("parsePublicCopyOverridesFromPageSearchParams", () => {
     expect(o.headline).toBe("Campanha X");
     expect(o.description).toBe("Descrição");
     expect(o.subtitle).toBeNull();
+    expect(o.formSubtitle).toBeNull();
   });
 });

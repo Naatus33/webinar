@@ -63,7 +63,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const webinar = await prisma.webinar.findUnique({ where: { id }, select: { id: true, config: true } });
   if (!webinar) return NextResponse.json({ error: "Webinar não encontrado" }, { status: 404 });
 
-  const cfg = webinar.config as any;
+  const cfg = webinar.config as unknown as {
+    chat?: { readonly?: boolean; adminOnly?: boolean };
+    adminAvatar?: { displayName?: string };
+  };
   if (cfg?.chat?.readonly)
     return NextResponse.json({ error: "Chat em modo somente leitura" }, { status: 403 });
 

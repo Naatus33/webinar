@@ -22,11 +22,14 @@ interface RegistrationPagePreviewProps {
   logoPosition?: "left" | "center";
   logoSize?: "sm" | "md" | "lg";
   overlayOpacity?: number;
+  overlayTintColor?: string;
+  formSubtitle?: string;
   onLogoPick?: () => void;
   onLogoDrop?: (file: File) => void;
   onTitleChange?: (value: string) => void;
   onDescriptionChange?: (value: string) => void;
   onCtaTextChange?: (value: string) => void;
+  onFormSubtitleChange?: (value: string) => void;
   onSponsorsChange?: (value: Sponsor[]) => void;
 }
 
@@ -38,17 +41,20 @@ export function RegistrationPagePreview({
   title,
   ctaText,
   sponsors = [],
-  primaryColor = "#7C3AED",
+  primaryColor = "#8B0000",
   eventStartDate,
   eventStartTime,
   countdown,
   logoSize = "md",
   overlayOpacity = 0.5,
+  overlayTintColor = "#000000",
+  formSubtitle = "",
   onLogoPick,
   onLogoDrop,
   onTitleChange,
   onDescriptionChange,
   onCtaTextChange,
+  onFormSubtitleChange,
   onSponsorsChange,
 }: RegistrationPagePreviewProps) {
   const titleSafe = title ?? "";
@@ -58,6 +64,7 @@ export function RegistrationPagePreview({
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [editingCta, setEditingCta] = useState(false);
+  const [editingFormSubtitle, setEditingFormSubtitle] = useState(false);
   const [editingSponsors, setEditingSponsors] = useState(false);
   const [logoScale, setLogoScale] = useState(1);
   const [sponsorTileScale, setSponsorTileScale] = useState(1);
@@ -65,6 +72,7 @@ export function RegistrationPagePreview({
   const [titleDraft, setTitleDraft] = useState(titleSafe);
   const [descriptionDraft, setDescriptionDraft] = useState(descriptionSafe);
   const [ctaDraft, setCtaDraft] = useState(ctaTextSafe);
+  const [formSubtitleDraft, setFormSubtitleDraft] = useState(formSubtitle);
 
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -79,6 +87,10 @@ export function RegistrationPagePreview({
       if (sponsorWheelRafRef.current) cancelAnimationFrame(sponsorWheelRafRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    setFormSubtitleDraft(formSubtitle);
+  }, [formSubtitle]);
 
   const handleLogoWheelZoom = (e: WheelEvent) => {
     e.preventDefault();
@@ -125,6 +137,10 @@ export function RegistrationPagePreview({
       : "center";
 
   const resolvedCtaText = useMemo(() => ctaTextSafe || "Ir para o webinar!", [ctaTextSafe]);
+  const resolvedFormSubtitle = useMemo(
+    () => formSubtitle.trim() || "Texto de apoio do formulário (edite na configuração).",
+    [formSubtitle],
+  );
   const resolvedTitle = useMemo(() => titleSafe || "Insira aqui o título da captura", [titleSafe]);
   const resolvedDescription = useMemo(
     () => descriptionSafe || "Texto descritivo do seu webinar aparecerá aqui.",
@@ -154,56 +170,57 @@ export function RegistrationPagePreview({
     onCtaTextChange?.(ctaDraft);
   }
 
+  function commitFormSubtitle() {
+    setEditingFormSubtitle(false);
+    onFormSubtitleChange?.(formSubtitleDraft);
+  }
+
   const canEditTitle = Boolean(onTitleChange);
   const canEditDescription = Boolean(onDescriptionChange);
   const canEditCta = Boolean(onCtaTextChange);
+  const canEditFormSubtitle = Boolean(onFormSubtitleChange);
   const canEditSponsors = Boolean(onSponsorsChange);
   const hasSponsorLogos = sponsors.some((s) => Boolean(s.logoUrl));
 
   return (
     <div
-      className={`relative flex min-h-[360px] w-full items-center justify-center overflow-hidden rounded-xl p-3 sm:min-h-[420px] sm:p-6 ${
-        showCountdownBanner || eventStartLabel ? "pt-12 sm:pt-14" : ""
-      }`}
+      className="group relative flex min-h-[360px] w-full flex-col overflow-hidden rounded-xl bg-zinc-950 transition-all duration-300 lg:min-h-[420px] lg:flex-row"
       style={{
         backgroundImage: bgImage ? `url(${bgImage})` : undefined,
         backgroundSize: "cover",
         backgroundPosition: bgImage ? bgPositionCss : undefined,
-        backgroundColor: bgImage ? undefined : "#1e293b",
+        backgroundColor: bgImage ? undefined : "#0a0a0a",
       }}
     >
-      {/* Overlay escuro se tiver imagem */}
-      {bgImage && (
-        <div
-          className="absolute inset-0"
-          style={{ backgroundColor: `rgba(0,0,0,${overlayOpacity})` }}
-        />
-      )}
-
-      {(showCountdownBanner || eventStartLabel) && (
-        <div className="pointer-events-none absolute left-1/2 top-2 z-20 w-[92%] max-w-lg -translate-x-1/2 space-y-0.5 text-center">
-          {showCountdownBanner && (
-            <p className="text-[11px] font-medium text-white/95 drop-shadow-sm sm:text-xs">
-              {countdown!.message}
-            </p>
-          )}
-          {eventStartLabel && (
-            <p className="text-[10px] text-white/80 drop-shadow-sm sm:text-[11px]">
-              Início: {eventStartLabel}
-            </p>
-          )}
-        </div>
-      )}
-
-      <div className="relative z-10 flex w-full max-w-2xl min-w-0 gap-2 sm:gap-4">
+      <div className="relative z-10 flex h-full w-full min-w-0 flex-col lg:flex-row">
         {/* Card esquerdo */}
         <div
-          className={`min-w-0 flex flex-1 flex-col gap-2 rounded-xl p-3 sm:gap-3 sm:p-4 ${
-            overlayOpacity > 0 ? "backdrop-blur-sm" : ""
-          } ${overlayOpacity > 0 ? "bg-white/10" : "bg-slate-900/40"}`}
+          className={`relative min-w-0 flex flex-1 flex-col justify-between gap-3 p-4 sm:p-5 ${
+            overlayOpacity > 0 ? "backdrop-blur-[1px]" : ""
+          } transition-all duration-300`}
         >
+          {bgImage && (
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(to bottom right, color-mix(in srgb, ${overlayTintColor} 72%, transparent), color-mix(in srgb, ${overlayTintColor} 42%, transparent), color-mix(in srgb, ${overlayTintColor} 48%, transparent))`,
+                opacity: Math.min(1, Math.max(0.1, overlayOpacity)),
+              }}
+            />
+          )}
+          <div className="relative z-10 space-y-3 transition-all duration-300 group-hover:translate-y-[-2px]">
+            {(showCountdownBanner || eventStartLabel) && (
+              <div className="space-y-0.5">
+                {showCountdownBanner && (
+                  <p className="text-[10px] font-medium text-white/95 sm:text-xs">{countdown!.message}</p>
+                )}
+                {eventStartLabel && (
+                  <p className="text-[10px] text-white/80 sm:text-[11px]">Início: {eventStartLabel}</p>
+                )}
+              </div>
+            )}
           {/* Centraliza sempre a logo no preview */}
-          <div className="flex w-full items-center justify-center">
+          <div className="flex w-full items-center justify-start">
             {onLogoPick ? (
               <button
                 type="button"
@@ -221,9 +238,7 @@ export function RegistrationPagePreview({
                   const file = e.dataTransfer.files?.[0];
                   if (file && onLogoDrop) onLogoDrop(file);
                 }}
-                className={`inline-flex w-full items-center ${
-                  "justify-center"
-                } rounded-sm outline-none`}
+                className="inline-flex w-full items-center justify-start rounded-sm outline-none"
                 aria-label="Selecionar logo"
                 onWheel={handleLogoWheelZoom}
               >
@@ -231,7 +246,7 @@ export function RegistrationPagePreview({
                   <img
                     src={logoUrl}
                     alt="Logo"
-                    className="w-auto object-contain"
+                    className="w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                     style={{ height: logoHeight }}
                   />
                 ) : (
@@ -245,7 +260,7 @@ export function RegistrationPagePreview({
               <img
                 src={logoUrl}
                 alt="Logo"
-                className="w-auto object-contain"
+                className="w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                 style={{ height: logoHeight }}
                 onWheel={handleLogoWheelZoom}
               />
@@ -293,14 +308,15 @@ export function RegistrationPagePreview({
                   setDescriptionDraft(descriptionSafe);
                   setEditingDescription(true);
                 }}
-                className="text-left text-xs sm:text-sm text-white/80 leading-relaxed"
+                className="text-left text-xs sm:text-sm text-white/90 leading-relaxed"
               >
                 {resolvedDescription}
               </button>
             )
           ) : (
-            <p className="text-xs sm:text-sm text-white/80 leading-relaxed">{resolvedDescription}</p>
+            <p className="text-xs sm:text-sm text-white/90 leading-relaxed">{resolvedDescription}</p>
           )}
+          </div>
 
           {/* Patrocinadores (clicáveis para editar) */}
           {canEditSponsors ? (
@@ -331,11 +347,11 @@ export function RegistrationPagePreview({
                   e.stopPropagation();
                   setEditingSponsors(true);
                 }}
-                className="flex w-full flex-col items-center justify-center gap-1 border-t border-white/20 pt-2 text-center"
+                className="relative z-10 flex w-full flex-col items-start justify-center gap-1 border-t border-white/20 pt-2 text-left transition-all duration-300 hover:border-white/35"
               >
-                <p className="text-[10px] text-white/50">Realização:</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">Patrocinadores</p>
                 {hasSponsorLogos ? (
-                  <div className="grid grid-cols-4 gap-2 place-items-center sm:grid-cols-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     {sponsors.map((s, i) =>
                       s.logoUrl ? (
                         <div
@@ -348,7 +364,7 @@ export function RegistrationPagePreview({
                           <img
                             src={s.logoUrl}
                             alt={s.name || "Logo patrocinador"}
-                            className="object-contain"
+                            className="object-contain brightness-0 invert"
                             style={{ width: sponsorLogoSize, height: sponsorLogoSize }}
                           />
                         </div>
@@ -374,9 +390,9 @@ export function RegistrationPagePreview({
               </button>
             )
           ) : hasSponsorLogos ? (
-            <div className="flex flex-col items-center gap-1 border-t border-white/20 pt-2">
-              <p className="text-[10px] text-white/50">Realização:</p>
-              <div className="grid grid-cols-4 gap-2 place-items-center sm:grid-cols-3">
+            <div className="relative z-10 flex flex-col items-start gap-1 border-t border-white/20 pt-2">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-white/60">Patrocinadores</p>
+              <div className="flex flex-wrap items-center gap-2">
                 {sponsors.map((s, i) =>
                   s.logoUrl ? (
                     <div
@@ -389,7 +405,7 @@ export function RegistrationPagePreview({
                       <img
                         src={s.logoUrl}
                         alt={s.name || "Logo patrocinador"}
-                        className="object-contain"
+                        className="object-contain brightness-0 invert"
                         style={{ width: sponsorLogoSize, height: sponsorLogoSize }}
                       />
                     </div>
@@ -414,8 +430,7 @@ export function RegistrationPagePreview({
         </div>
 
         {/* Card direito */}
-        <div className="min-w-0 flex flex-1 flex-col gap-2 rounded-xl bg-white/95 p-3 shadow-lg sm:gap-3 sm:p-4">
-          {/* Título (clicável para editar) */}
+        <div className="min-w-0 flex flex-1 flex-col justify-center gap-3 bg-zinc-900 px-4 py-5 transition-all duration-300 group-hover:bg-zinc-900/95 sm:px-5">
           {editingTitle && canEditTitle ? (
             <div onClick={(e) => e.stopPropagation()}>
               <input
@@ -434,7 +449,7 @@ export function RegistrationPagePreview({
                   }
                 }}
                 autoFocus
-                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs sm:text-sm font-bold text-slate-800 outline-none ring-primary focus:ring-2"
+                className="w-full rounded-md border border-white/20 bg-zinc-800 px-2 py-1 text-xs sm:text-sm font-bold text-white outline-none ring-primary focus:ring-2"
               />
             </div>
           ) : (
@@ -446,20 +461,59 @@ export function RegistrationPagePreview({
                 setTitleDraft(titleSafe);
                 setEditingTitle(true);
               }}
-              className="text-left text-xs sm:text-sm font-bold text-slate-800"
+              className="text-left text-xs sm:text-sm font-bold text-white"
               disabled={!onTitleChange}
             >
               {resolvedTitle}
             </button>
           )}
+          {canEditFormSubtitle ? (
+            editingFormSubtitle ? (
+              <div onClick={(e) => e.stopPropagation()}>
+                <textarea
+                  value={formSubtitleDraft}
+                  onChange={(e) => setFormSubtitleDraft(e.target.value)}
+                  onBlur={commitFormSubtitle}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setEditingFormSubtitle(false);
+                      setFormSubtitleDraft(formSubtitle);
+                    }
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      commitFormSubtitle();
+                    }
+                  }}
+                  rows={2}
+                  autoFocus
+                  className="w-full resize-none rounded-md border border-white/20 bg-zinc-800 px-2 py-1 text-[11px] text-white/80 outline-none ring-primary focus:ring-2"
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFormSubtitleDraft(formSubtitle);
+                  setEditingFormSubtitle(true);
+                }}
+                className="text-left text-[11px] leading-relaxed text-white/50"
+              >
+                {formSubtitle.trim() ? formSubtitle : resolvedFormSubtitle}
+              </button>
+            )
+          ) : (
+            <p className="text-[11px] leading-relaxed text-white/50">{resolvedFormSubtitle}</p>
+          )}
           <div className="space-y-2">
             <div className="space-y-1">
-              <label className="block text-[10px] text-slate-500">Nome *</label>
-              <div className="h-8 w-full rounded-md border border-slate-200 bg-slate-50" />
+              <label className="block text-[10px] uppercase tracking-[0.16em] text-white/60">Nome *</label>
+              <div className="h-8 w-full border-b border-white/30 bg-transparent transition-all duration-300 group-hover:border-white/45" />
             </div>
             <div className="space-y-1">
-              <label className="block text-[10px] text-slate-500">E-mail *</label>
-              <div className="h-8 w-full rounded-md border border-slate-200 bg-slate-50" />
+              <label className="block text-[10px] uppercase tracking-[0.16em] text-white/60">E-mail *</label>
+              <div className="h-8 w-full border-b border-white/30 bg-transparent transition-all duration-300 group-hover:border-white/45" />
             </div>
           </div>
           {/* CTA (clicável para editar) */}
@@ -481,7 +535,7 @@ export function RegistrationPagePreview({
                   }
                 }}
                 autoFocus
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-slate-800 outline-none ring-primary focus:ring-2"
+                className="w-full rounded-md border border-white/20 bg-zinc-800 px-3 py-2 text-xs sm:text-sm font-semibold text-white outline-none ring-primary focus:ring-2"
               />
             </div>
           ) : (
@@ -493,7 +547,7 @@ export function RegistrationPagePreview({
                 setCtaDraft(ctaTextSafe);
                 setEditingCta(true);
               }}
-              className="w-full rounded-lg py-2 text-xs sm:text-sm font-semibold text-white shadow"
+              className="w-full rounded-xl py-2 text-xs sm:text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110"
               style={{ backgroundColor: primaryColor }}
               disabled={!onCtaTextChange}
             >

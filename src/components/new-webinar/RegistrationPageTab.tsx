@@ -14,9 +14,14 @@ interface RegistrationPageTabProps {
   ctaText: string;
   sponsors: Sponsor[];
   primaryColor: string;
+  overlayOpacity: number;
+  overlayTintColor: string;
+  formSubtitle: string;
   eventStartDate: string;
   eventStartTime: string;
   countdown: WebinarConfig["countdown"];
+  /** Webinar existente: envia para /api/upload (organização por webinar). */
+  webinarId?: string | null;
   onChange: (field: string, value: unknown) => void;
 }
 
@@ -29,9 +34,13 @@ export function RegistrationPageTab({
   ctaText,
   sponsors,
   primaryColor,
+  overlayOpacity,
+  overlayTintColor,
+  formSubtitle,
   eventStartDate,
   eventStartTime,
   countdown,
+  webinarId,
   onChange,
 }: RegistrationPageTabProps) {
   const bgInputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +93,7 @@ export function RegistrationPageTab({
           const nextPos = { x: clamp01(x), y: clamp01(y) };
 
           onChange("regBgPosition", nextPos);
-          handleUpload(file, "regBgImage");
+          handleUpload(file, "regBgImage", webinarId ?? undefined);
         }}
       >
         <RegistrationPagePreview
@@ -101,12 +110,15 @@ export function RegistrationPageTab({
           countdown={countdown}
           logoPosition="left"
           logoSize="md"
-          overlayOpacity={0.5}
+          overlayOpacity={overlayOpacity}
+          overlayTintColor={overlayTintColor}
+          formSubtitle={formSubtitle}
           onLogoPick={() => logoInputRef.current?.click()}
-          onLogoDrop={(file) => handleUpload(file, "regLogoUrl")}
+          onLogoDrop={(file) => handleUpload(file, "regLogoUrl", webinarId ?? undefined)}
           onTitleChange={(value) => onChange("regTitle", value)}
           onDescriptionChange={(value) => onChange("regDescription", value)}
           onCtaTextChange={(value) => onChange("regCtaText", value)}
+          onFormSubtitleChange={(value) => onChange("captureFormSubtitle", value)}
           onSponsorsChange={(value) => onChange("regSponsors", value)}
         />
       </div>
@@ -119,7 +131,7 @@ export function RegistrationPageTab({
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) handleUpload(file, "regBgImage");
+          if (file) handleUpload(file, "regBgImage", webinarId ?? undefined);
         }}
       />
       <input
@@ -129,7 +141,7 @@ export function RegistrationPageTab({
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) handleUpload(file, "regLogoUrl");
+          if (file) handleUpload(file, "regLogoUrl", webinarId ?? undefined);
         }}
       />
     </div>

@@ -6,7 +6,7 @@ import {
   Palette, Type, Play, Tag, AlertTriangle, MessageCircle,
   Users, Layout, Timer, Gift, Shield, CheckSquare, ArrowLeft,
   ExternalLink, CheckCircle2, Loader2, AlertCircle, Settings, Target, Zap, Flag, Sparkles,
-  Monitor, Smartphone, ChevronRight, ChevronLeft, Save
+  Monitor, Smartphone, ChevronRight, ChevronLeft, Save, FileText,
 } from "lucide-react";
 
 import { useWebinarStore } from "@/store/useWebinarStore";
@@ -27,6 +27,7 @@ import { SocialProofPanel } from "@/components/builder/SocialProofPanel";
 import { FinishedPanel } from "@/components/builder/FinishedPanel";
 import { MacrosPanel } from "@/components/builder/MacrosPanel";
 import { RoomSettingsTab } from "@/components/builder/RoomSettingsTab";
+import { RegistrationCapturePanel } from "@/components/builder/RegistrationCapturePanel";
 
 interface WebinarData {
   id: string;
@@ -52,7 +53,7 @@ interface WebinarData {
   regCtaText: string | null;
   regSponsors: { name: string; logoUrl: string }[];
   config: WebinarConfig;
-  macros: any[];
+  macros: unknown[];
 }
 
 interface BuilderClientProps {
@@ -69,6 +70,7 @@ const STEPS = [
       { id: "layout", label: "Layout", Icon: Layout, component: LayoutPanel },
       { id: "content", label: "Conteúdo", Icon: Type, component: ContentPanel },
       { id: "video", label: "Vídeo", Icon: Play, component: VideoPanel },
+      { id: "login-sala", label: "Login e sala", Icon: FileText, component: RegistrationCapturePanel },
     ]
   },
   { 
@@ -80,13 +82,6 @@ const STEPS = [
       { id: "participants", label: "Participantes", Icon: Users, component: ParticipantsPanel },
       { id: "social-proof", label: "Prova Social", Icon: Shield, component: SocialProofPanel },
       { id: "room-settings", label: "Sala Live", Icon: Sparkles, component: RoomSettingsTab },
-    ]
-  },
-  { 
-    id: "conversao", 
-    label: "Conversão", 
-    icon: Zap,
-    tabs: [
       { id: "offer", label: "Oferta", Icon: Tag, component: OfferPanel },
       { id: "offer-popup", label: "Pop-up Oferta", Icon: Gift, component: OfferPopupPanel },
       { id: "scarcity", label: "Escassez", Icon: AlertTriangle, component: ScarcityPanel },

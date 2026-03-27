@@ -1,11 +1,12 @@
 "use client";
 
 import { SwitchRow } from "@/components/ui/switch-row";
+import { mergeScarcityConfig } from "@/lib/webinar-templates";
 import { useWebinarStore } from "@/store/useWebinarStore";
 
 export function ScarcityPanel() {
   const { config, updateConfig, setConfigField } = useWebinarStore();
-  const { scarcity } = config;
+  const scarcity = mergeScarcityConfig(config.scarcity);
 
   return (
     <div className="space-y-5 p-5">

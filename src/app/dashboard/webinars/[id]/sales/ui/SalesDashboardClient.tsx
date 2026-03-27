@@ -2,11 +2,17 @@
 
 import { useState, useMemo } from "react";
 import useSWR from "swr";
-import { 
-  Users, ShoppingCart, MousePointer2, MessageCircle, 
-  Search, Filter, Download, ExternalLink, 
-  TrendingUp, Star, Clock, Phone, Mail,
-  ChevronRight, AlertCircle, CheckCircle2
+import {
+  Users,
+  ShoppingCart,
+  MousePointer2,
+  MessageCircle,
+  Search,
+  Download,
+  TrendingUp,
+  Star,
+  Phone,
+  Mail,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -39,17 +45,17 @@ export function SalesDashboardClient({ webinarId, webinarName }: { webinarId: st
   const { data, isLoading } = useSWR<SalesData>(
     `/api/webinars/${webinarId}/sales-data`,
     fetcher,
-    { refreshInterval: 15_000 }
+    { refreshInterval: 15_000 },
   );
 
   const filteredLeads = useMemo(() => {
     if (!data?.leads) return [];
-    return data.leads.filter(lead => {
-      const matchesSearch = lead.name.toLowerCase().includes(search.toLowerCase()) || 
-                            lead.email.toLowerCase().includes(search.toLowerCase());
-      const matchesFilter = filter === "all" ? true :
-                            filter === "hot" ? lead.isHot :
-                            filter === "clicked" ? lead.clickedOffer : true;
+    return data.leads.filter((lead) => {
+      const matchesSearch =
+        lead.name.toLowerCase().includes(search.toLowerCase()) ||
+        lead.email.toLowerCase().includes(search.toLowerCase());
+      const matchesFilter =
+        filter === "all" ? true : filter === "hot" ? lead.isHot : filter === "clicked" ? lead.clickedOffer : true;
       return matchesSearch && matchesFilter;
     });
   }, [data, search, filter]);
@@ -63,69 +69,103 @@ export function SalesDashboardClient({ webinarId, webinarName }: { webinarId: st
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 p-8 space-y-8 font-sans">
-      
-      {/* Header Vendedor */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="min-h-screen space-y-8 bg-background p-8 font-sans text-foreground">
+      <header className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-              <ShoppingCart className="h-5 w-5 text-emerald-500" />
+          <div className="mb-2 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
+              <ShoppingCart className="h-5 w-5 text-primary" />
             </div>
-            <h1 className="text-2xl font-black text-white uppercase tracking-tight">Painel de Vendas</h1>
+            <h1 className="text-2xl font-black uppercase tracking-tight text-foreground">Painel de Vendas</h1>
           </div>
-          <p className="text-sm text-slate-500 font-medium">Gerencie seus leads quentes e maximize as conversões do <span className="text-slate-300">{webinarName}</span>.</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            Gerencie seus leads quentes e maximize as conversões do{" "}
+            <span className="text-foreground/90">{webinarName}</span>.
+          </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2.5 rounded-xl text-xs font-black border border-slate-800 transition-all">
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-xs font-black transition-all hover:bg-muted"
+          >
             <Download className="h-4 w-4" /> EXPORTAR LEADS
           </button>
         </div>
       </header>
 
-      {/* KPIs de Vendas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         {[
-          { label: "Total de Leads", value: data?.totalLeads || 0, icon: Users, color: "text-blue-400", bg: "bg-blue-500/5" },
-          { label: "Leads Quentes", value: data?.hotLeadsCount || 0, icon: Star, color: "text-amber-400", bg: "bg-amber-500/5" },
-          { label: "Cliques na Oferta", value: data?.offerClicks || 0, icon: MousePointer2, color: "text-primary", bg: "bg-primary/5" },
-          { label: "Taxa de Cliques", value: `${data?.conversionRate || 0}%`, icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/5" },
+          {
+            label: "Total de Leads",
+            value: data?.totalLeads || 0,
+            icon: Users,
+            color: "text-muted-foreground",
+            bg: "bg-muted/30",
+          },
+          {
+            label: "Leads Quentes",
+            value: data?.hotLeadsCount || 0,
+            icon: Star,
+            color: "text-primary",
+            bg: "bg-primary/5",
+          },
+          {
+            label: "Cliques na Oferta",
+            value: data?.offerClicks || 0,
+            icon: MousePointer2,
+            color: "text-primary",
+            bg: "bg-primary/5",
+          },
+          {
+            label: "Taxa de Cliques",
+            value: `${data?.conversionRate || 0}%`,
+            icon: TrendingUp,
+            color: "text-foreground",
+            bg: "bg-muted/40",
+          },
         ].map((kpi, i) => (
-          <div key={i} className={`p-6 rounded-[32px] border border-slate-800/60 ${kpi.bg} backdrop-blur-sm space-y-3 shadow-xl`}>
+          <div
+            key={i}
+            className={`space-y-3 rounded-[32px] border border-border/60 p-6 shadow-xl backdrop-blur-sm ${kpi.bg}`}
+          >
             <div className="flex items-center justify-between">
               <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tempo Real</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                Tempo Real
+              </span>
             </div>
             <div>
-              <p className="text-3xl font-black text-white tabular-nums">{kpi.value}</p>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{kpi.label}</p>
+              <p className="text-3xl font-black tabular-nums text-foreground">{kpi.value}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{kpi.label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* CRM de Leads */}
-      <section className="bg-slate-900/40 border border-slate-800/60 rounded-[40px] overflow-hidden shadow-2xl">
-        <div className="p-8 border-b border-slate-800/60 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900/60">
-          <div className="flex items-center gap-4">
-            <h2 className="text-lg font-black text-white uppercase tracking-widest">Gestão de Leads</h2>
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
-              <button 
+      <section className="overflow-hidden rounded-[40px] border border-border/60 bg-card/40 shadow-2xl">
+        <div className="flex flex-col justify-between gap-6 border-b border-border/60 bg-muted/20 p-8 md:flex-row md:items-center">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <h2 className="text-lg font-black uppercase tracking-widest text-foreground">Gestão de Leads</h2>
+            <div className="flex rounded-xl border border-border bg-background p-1">
+              <button
+                type="button"
                 onClick={() => setFilter("all")}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${filter === "all" ? 'bg-slate-800 text-white shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`rounded-lg px-4 py-1.5 text-[10px] font-black uppercase transition-all ${filter === "all" ? "bg-muted text-foreground shadow-inner" : "text-muted-foreground hover:text-foreground"}`}
               >
                 Todos
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={() => setFilter("hot")}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${filter === "hot" ? 'bg-amber-500/10 text-amber-500 shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`rounded-lg px-4 py-1.5 text-[10px] font-black uppercase transition-all ${filter === "hot" ? "bg-primary/15 text-primary shadow-inner" : "text-muted-foreground hover:text-foreground"}`}
               >
                 Quentes
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={() => setFilter("clicked")}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${filter === "clicked" ? 'bg-primary/10 text-primary shadow-inner' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`rounded-lg px-4 py-1.5 text-[10px] font-black uppercase transition-all ${filter === "clicked" ? "bg-primary/10 text-primary shadow-inner" : "text-muted-foreground hover:text-foreground"}`}
               >
                 Clicaram
               </button>
@@ -133,51 +173,57 @@ export function SalesDashboardClient({ webinarId, webinarName }: { webinarId: st
           </div>
 
           <div className="relative w-full md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input 
-              type="text" 
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
               placeholder="Buscar por nome ou e-mail..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-3 pl-12 pr-4 text-sm text-white placeholder:text-slate-600 focus:border-primary outline-none transition-all"
+              className="w-full rounded-2xl border border-input bg-background py-3 pl-12 pr-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="bg-slate-950/50 border-b border-slate-800/60">
-                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Lead</th>
-                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Engajamento</th>
-                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Ações</th>
-                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
-                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Contato</th>
+              <tr className="border-b border-border/60 bg-muted/30">
+                <th className="p-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Lead</th>
+                <th className="p-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  Engajamento
+                </th>
+                <th className="p-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</th>
+                <th className="p-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status</th>
+                <th className="p-6 text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  Contato
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/40">
+            <tbody className="divide-y divide-border/50">
               {filteredLeads.map((lead) => (
-                <tr key={lead.id} className="group hover:bg-slate-800/20 transition-colors">
+                <tr key={lead.id} className="group transition-colors hover:bg-muted/25">
                   <td className="p-6">
                     <div className="flex items-center gap-4">
-                      <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-lg ${lead.isHot ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-slate-800 text-slate-400'}`}>
+                      <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-black ${lead.isHot ? "border border-primary/25 bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+                      >
                         {lead.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-black text-white">{lead.name}</p>
-                        <p className="text-xs text-slate-500">{lead.email}</p>
+                        <p className="text-sm font-black text-foreground">{lead.name}</p>
+                        <p className="text-xs text-muted-foreground">{lead.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="p-6">
                     <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-bold uppercase text-slate-500">
+                      <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground">
                         <span>Retenção</span>
-                        <span className="text-slate-300">{lead.watchedPercentage}%</span>
+                        <span className="text-foreground">{lead.watchedPercentage}%</span>
                       </div>
-                      <div className="h-1.5 w-32 bg-slate-900 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-1000 ${lead.watchedPercentage > 70 ? 'bg-emerald-500' : 'bg-primary'}`}
+                      <div className="h-1.5 w-32 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full transition-all duration-1000 ${lead.watchedPercentage > 70 ? "bg-primary" : "bg-primary/60"}`}
                           style={{ width: `${lead.watchedPercentage}%` }}
                         />
                       </div>
@@ -185,11 +231,17 @@ export function SalesDashboardClient({ webinarId, webinarName }: { webinarId: st
                   </td>
                   <td className="p-6">
                     <div className="flex gap-3">
-                      <div title="Mensagens no Chat" className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-black text-slate-400">
+                      <div
+                        title="Mensagens no Chat"
+                        className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2 py-1 text-[10px] font-black text-muted-foreground"
+                      >
                         <MessageCircle className="h-3 w-3" /> {lead.messagesCount}
                       </div>
                       {lead.clickedOffer && (
-                        <div title="Clicou na Oferta" className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 text-[10px] font-black text-primary">
+                        <div
+                          title="Clicou na Oferta"
+                          className="flex items-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 px-2 py-1 text-[10px] font-black text-primary"
+                        >
                           <ShoppingCart className="h-3 w-3" /> CLICOU
                         </div>
                       )}
@@ -197,27 +249,28 @@ export function SalesDashboardClient({ webinarId, webinarName }: { webinarId: st
                   </td>
                   <td className="p-6">
                     {lead.isHot ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase border border-amber-500/20">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase text-primary">
                         <Star className="h-3 w-3 fill-current" /> Lead Quente
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-slate-500 text-[10px] font-black uppercase">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-[10px] font-black uppercase text-muted-foreground">
                         Interessado
                       </span>
                     )}
                   </td>
                   <td className="p-6 text-right">
                     <div className="flex justify-end gap-2">
-                      <a 
-                        href={`https://wa.me/${lead.phone}`} 
+                      <a
+                        href={`https://wa.me/${lead.phone}`}
                         target="_blank"
-                        className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20"
+                        rel="noreferrer"
+                        className="rounded-xl border border-primary/25 bg-primary/10 p-2.5 text-primary transition-all hover:bg-primary hover:text-primary-foreground"
                       >
                         <Phone className="h-4 w-4" />
                       </a>
-                      <a 
+                      <a
                         href={`mailto:${lead.email}`}
-                        className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20"
+                        className="rounded-xl border border-border bg-muted/40 p-2.5 text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
                       >
                         <Mail className="h-4 w-4" />
                       </a>
@@ -228,13 +281,13 @@ export function SalesDashboardClient({ webinarId, webinarName }: { webinarId: st
             </tbody>
           </table>
         </div>
-        
+
         {filteredLeads.length === 0 && (
-          <div className="p-20 text-center space-y-4">
-            <div className="h-20 w-20 rounded-[32px] bg-slate-900 flex items-center justify-center mx-auto border border-slate-800">
-              <Search className="h-10 w-10 text-slate-700" />
+          <div className="space-y-4 p-20 text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[32px] border border-border bg-muted/40">
+              <Search className="h-10 w-10 text-muted-foreground" />
             </div>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Nenhum lead encontrado</p>
+            <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Nenhum lead encontrado</p>
           </div>
         )}
       </section>

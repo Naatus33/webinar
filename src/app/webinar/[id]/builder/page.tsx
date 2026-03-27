@@ -87,7 +87,7 @@ export default async function BuilderPage({ params }: BuilderPageProps) {
         regCtaText: webinarPublic.regCtaText,
         regSponsors: (webinarPublic.regSponsors as { name: string; logoUrl: string }[]) ?? [],
         config: webinarPublic.config as WebinarConfig,
-        macros: (webinarPublic.macros as any[]) ?? [],
+        macros: (Array.isArray(webinarPublic.macros) ? webinarPublic.macros : []) as unknown[],
       }}
     />
   );

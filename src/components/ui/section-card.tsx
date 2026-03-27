@@ -18,7 +18,7 @@ export function SectionCard({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border/80 bg-card/60 p-4 shadow-sm transition-[box-shadow,transform] motion-safe:duration-[var(--motion-duration-normal,220ms)] motion-safe:hover:-translate-y-px motion-safe:hover:shadow-md",
+        "rounded-xl border border-border/70 bg-card/80 p-4 shadow-premium-sm transition-[box-shadow,transform] motion-safe:duration-[var(--motion-duration-normal,240ms)] motion-safe:hover:-translate-y-px motion-safe:hover:shadow-premium",
         className,
       )}
     >

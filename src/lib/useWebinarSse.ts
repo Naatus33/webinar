@@ -13,7 +13,7 @@ export type ChatMessage = {
   pinned: boolean;
   timestamp: number | null;
   createdAt: string;
-  /** Total de curtidas (servidor). */
+  /** Total de curtidas no servidor. */
   likeCount?: number;
   /** Se este viewer já curtiu (precisa `viewerKey` na URL do stream). */
   heartLiked?: boolean;
@@ -56,6 +56,87 @@ type WebinarSnapshot = {
   onlineLeads: OnlineLead[];
 };
 
+type Listener = {
+  setData: (s: WebinarSnapshot | null) => void;
+  setConnected: (c: boolean) => void;
+};
+
+type PoolEntry = {
+  es: EventSource;
+  listeners: Set<Listener>;
+  refCount: number;
+};
+
+const pool = new Map<string, PoolEntry>();
+const pendingClose = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** React Strict Mode desmonta e remonta em <~50ms; fechar só após esse atraso evita NS_BINDING_ABORTED. */
+const CLOSE_DELAY_MS = 600;
+
+function subscribeStream(url: string, listener: Listener): () => void {
+  const pending = pendingClose.get(url);
+  if (pending != null) {
+    clearTimeout(pending);
+    pendingClose.delete(url);
+  }
+
+  let entry = pool.get(url);
+  if (!entry) {
+    const es = new EventSource(url);
+    entry = { es, listeners: new Set(), refCount: 0 };
+
+    const onSnapshot = (e: MessageEvent) => {
+      try {
+        const snapshot = JSON.parse(e.data) as WebinarSnapshot;
+        entry!.listeners.forEach((L) => L.setData(snapshot));
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const onError = () => {
+      entry!.listeners.forEach((L) => L.setConnected(false));
+    };
+
+    es.onopen = () => {
+      entry!.listeners.forEach((L) => L.setConnected(true));
+    };
+    es.addEventListener("snapshot", onSnapshot as EventListener);
+    es.addEventListener("error", onError);
+
+    pool.set(url, entry);
+  }
+
+  entry.refCount += 1;
+  entry.listeners.add(listener);
+  if (entry.es.readyState === EventSource.OPEN) {
+    listener.setConnected(true);
+  }
+
+  return () => {
+    const e = pool.get(url);
+    if (!e) return;
+    e.listeners.delete(listener);
+    e.refCount -= 1;
+
+    if (e.refCount <= 0) {
+      const tid = setTimeout(() => {
+        pendingClose.delete(url);
+        const e2 = pool.get(url);
+        if (e2 && e2.refCount <= 0) {
+          try {
+            e2.es.close();
+          } catch {
+            /* noop */
+          }
+          pool.delete(url);
+        }
+      }, CLOSE_DELAY_MS);
+      pendingClose.set(url, tid);
+    }
+  };
+}
+
 export function useWebinarSse(
   webinarId: string,
   enabled: boolean,
@@ -78,32 +159,11 @@ export function useWebinarSse(
   useEffect(() => {
     if (!url) return;
 
-    const es = new EventSource(url);
-
-    const onSnapshot = (e: MessageEvent) => {
-      try {
-        const snapshot = JSON.parse(e.data) as WebinarSnapshot;
-        setData(snapshot);
-      } catch {
-        // ignore parse errors
-      }
-    };
-
-    const onError = () => {
-      setConnected(false);
-    };
-
-    es.onopen = () => setConnected(true);
-    es.addEventListener("snapshot", onSnapshot as EventListener);
-    es.addEventListener("error", onError);
+    const listener: Listener = { setData: setData, setConnected: setConnected };
+    const unsubscribe = subscribeStream(url, listener);
 
     return () => {
-      try {
-        es.close();
-      } catch {
-        // ignore
-      }
-      setConnected(false);
+      unsubscribe();
     };
   }, [url]);
 

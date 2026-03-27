@@ -56,7 +56,7 @@ export function AnalyticsClient({ webinarId, webinarName }: { webinarId: string;
 
   const conversionRate = data.visits > 0 ? ((data.totalLeads / data.visits) * 100).toFixed(1) : "—";
 
-  const FUNNEL_COLORS = ["#f9b17a", "#676f9d", "#059669", "#ca8a04"];
+  const FUNNEL_COLORS = ["#8b0000", "#525252", "#15803d", "#a16207"];
 
   return (
     <div className="space-y-6">
@@ -72,7 +72,7 @@ export function AnalyticsClient({ webinarId, webinarName }: { webinarId: string;
         </div>
         <button
           onClick={exportCsv}
-          className="flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs text-foreground shadow-sm motion-transition hover:border-primary/50 hover:shadow-[0_0_18px_rgba(249,177,122,0.25)]"
+          className="flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs text-foreground shadow-sm motion-transition hover:border-primary/50 hover:shadow-[0_0_18px_rgba(139,0,0,0.22)]"
         >
           <Download className="h-4 w-4" /> Exportar CSV
         </button>
@@ -81,10 +81,10 @@ export function AnalyticsClient({ webinarId, webinarName }: { webinarId: string;
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[
-          { label: "Visitas", value: data.visits, Icon: Eye, color: "text-blue-400" },
+          { label: "Visitas", value: data.visits, Icon: Eye, color: "text-muted-foreground" },
           { label: "Leads", value: data.totalLeads, Icon: Users, color: "text-primary" },
-          { label: "Assistiram", value: data.watchedLeads, Icon: Activity, color: "text-emerald-400" },
-          { label: "Msgs no Chat", value: data.chatMessages, Icon: MessageCircle, color: "text-amber-400" },
+          { label: "Assistiram", value: data.watchedLeads, Icon: Activity, color: "text-foreground" },
+          { label: "Msgs no Chat", value: data.chatMessages, Icon: MessageCircle, color: "text-primary/80" },
         ].map(({ label, value, Icon, color }) => (
           <div
             key={label}
@@ -101,19 +101,19 @@ export function AnalyticsClient({ webinarId, webinarName }: { webinarId: string;
 
       {/* Metrics row */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-primary/40 bg-primary/10 p-4 shadow-[0_20px_55px_rgba(249,177,122,0.18)]">
+        <div className="rounded-2xl border border-primary/40 bg-primary/10 p-4 shadow-[0_20px_55px_rgba(139,0,0,0.15)]">
           <p className="text-xs text-muted-foreground">Taxa de conversão</p>
           <p className="mt-1 text-xl font-bold text-primary">{conversionRate}%</p>
           <p className="text-xs text-muted-foreground">visitas → leads</p>
         </div>
-        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/40 p-4 shadow-[0_20px_55px_rgba(16,185,129,0.5)]">
+        <div className="rounded-2xl border border-border bg-muted/30 p-4 shadow-sm">
           <p className="text-xs text-muted-foreground">Média assitido</p>
-          <p className="mt-1 text-xl font-bold text-emerald-400">{data.avgWatched}%</p>
+          <p className="mt-1 text-xl font-bold text-foreground">{data.avgWatched}%</p>
           <p className="text-xs text-muted-foreground">do webinar</p>
         </div>
-        <div className="rounded-2xl border border-blue-500/40 bg-blue-950/40 p-4 shadow-[0_20px_55px_rgba(59,130,246,0.5)]">
+        <div className="rounded-2xl border border-border bg-muted/30 p-4 shadow-sm">
           <p className="text-xs text-muted-foreground">Taxa de retenção</p>
-          <p className="mt-1 text-xl font-bold text-blue-400">
+          <p className="mt-1 text-xl font-bold text-primary">
             {data.totalLeads > 0 ? ((data.watchedLeads / data.totalLeads) * 100).toFixed(1) : "—"}%
           </p>
           <p className="text-xs text-muted-foreground">leads → assistiram</p>
@@ -125,11 +125,17 @@ export function AnalyticsClient({ webinarId, webinarName }: { webinarId: string;
         <h3 className="mb-4 text-sm font-semibold text-foreground">Funil de Conversão</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={data.funnel} layout="vertical">
-            <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} />
-            <YAxis dataKey="stage" type="category" width={110} tick={{ fontSize: 11, fill: "#94a3b8" }} />
+            <XAxis type="number" tick={{ fontSize: 11, fill: "#737373" }} />
+            <YAxis dataKey="stage" type="category" width={110} tick={{ fontSize: 11, fill: "#737373" }} />
             <Tooltip
-              contentStyle={{ backgroundColor: "#424769", border: "1px solid #676f9d", borderRadius: "8px", color: "#ffffff", fontSize: 12 }}
-              cursor={{ fill: "#676f9d33" }}
+              contentStyle={{
+                backgroundColor: "#141414",
+                border: "1px solid #333333",
+                borderRadius: "8px",
+                color: "#ffffff",
+                fontSize: 12,
+              }}
+              cursor={{ fill: "#80808033" }}
             />
             <Bar dataKey="value" radius={[0, 10, 10, 0]}>
               {data.funnel.map((_, i) => (
@@ -146,23 +152,29 @@ export function AnalyticsClient({ webinarId, webinarName }: { webinarId: string;
           <h3 className="mb-4 text-sm font-semibold text-foreground">Participantes por Minuto</h3>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={data.retention}>
-              <XAxis dataKey="minute" tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v) => `${v}m`} />
-              <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
+              <XAxis dataKey="minute" tick={{ fontSize: 10, fill: "#737373" }} tickFormatter={(v) => `${v}m`} />
+              <YAxis tick={{ fontSize: 10, fill: "#737373" }} />
               <Tooltip
-                contentStyle={{ backgroundColor: "#424769", border: "1px solid #676f9d", borderRadius: "8px", color: "#ffffff", fontSize: 12 }}
+                contentStyle={{
+                  backgroundColor: "#141414",
+                  border: "1px solid #333333",
+                  borderRadius: "8px",
+                  color: "#ffffff",
+                  fontSize: 12,
+                }}
                 labelFormatter={(v) => `Minuto ${v}`}
               />
               <Area
                 type="monotone"
                 dataKey="viewers"
-                stroke="#f9b17a"
+                stroke="#8b0000"
                 fill="url(#viewersGradient)"
                 strokeWidth={2}
               />
               <defs>
                 <linearGradient id="viewersGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f9b17a" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#f9b17a" stopOpacity={0.1} />
+                  <stop offset="0%" stopColor="#8b0000" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#8b0000" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
             </AreaChart>
@@ -176,12 +188,18 @@ export function AnalyticsClient({ webinarId, webinarName }: { webinarId: string;
           <h3 className="mb-4 text-sm font-semibold text-foreground">Leads por Dia</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={data.leadsTrend}>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} />
-              <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#737373" }} />
+              <YAxis tick={{ fontSize: 10, fill: "#737373" }} />
               <Tooltip
-                contentStyle={{ backgroundColor: "#424769", border: "1px solid #676f9d", borderRadius: "8px", color: "#ffffff", fontSize: 12 }}
+                contentStyle={{
+                  backgroundColor: "#141414",
+                  border: "1px solid #333333",
+                  borderRadius: "8px",
+                  color: "#ffffff",
+                  fontSize: 12,
+                }}
               />
-              <Bar dataKey="count" fill="#f9b17a" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="count" fill="#8b0000" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

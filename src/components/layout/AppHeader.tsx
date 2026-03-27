@@ -60,7 +60,7 @@ export function AppHeader({ title, subtitle, userLabel }: AppHeaderProps) {
         <div className="flex items-center gap-3">
           {userLabel && (
             <div className="flex items-center gap-2 rounded-full bg-muted/60 px-3 py-1 text-xs text-foreground/90 ring-1 ring-border/70">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-[#424769] text-[10px] font-semibold text-primary-foreground">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary to-muted text-[10px] font-semibold text-primary-foreground">
                 {userLabel
                   .split(" ")
                   .map((part) => part[0])

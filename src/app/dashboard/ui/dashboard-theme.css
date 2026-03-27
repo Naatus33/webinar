@@ -109,7 +109,7 @@
   background-color: transparent;
   color: var(--wm-accent);
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(249, 177, 122, 0.35);
+  box-shadow: 0 12px 28px rgba(139, 0, 0, 0.35);
 }
 
 .wm-profile-badge {
@@ -163,7 +163,7 @@
   transform: translateY(-4px);
   border-color: var(--wm-accent);
   border-left-width: 8px;
-  box-shadow: 0 12px 24px -8px rgba(249, 177, 122, 0.28);
+  box-shadow: 0 12px 24px -8px rgba(139, 0, 0, 0.28);
 }
 
 .wm-stat-info h3 {
@@ -260,7 +260,7 @@
 
 .wm-card:hover {
   border-color: var(--wm-accent);
-  box-shadow: 0 8px 20px rgba(249, 177, 122, 0.22);
+  box-shadow: 0 8px 20px rgba(139, 0, 0, 0.22);
 }
 
 .wm-card-header {
@@ -292,7 +292,7 @@
 }
 
 .wm-upcoming-item:hover {
-  background-color: rgba(230, 57, 70, 0.1);
+  background-color: rgba(139, 0, 0, 0.1);
 }
 
 .wm-upcoming-item:last-child {
@@ -357,7 +357,7 @@
   }
   50% {
     opacity: 1;
-    background-color: #c5303e;
+    background-color: #6b0000;
     border-color: var(--wm-accent);
   }
   100% {
@@ -443,7 +443,7 @@
 }
 
 .wm-table tr:hover td {
-  background-color: #2A2A2A;
+  background-color: var(--color-cinza-claro, #2a2a2a);
 }
 
 .wm-status-badge {

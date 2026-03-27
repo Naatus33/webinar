@@ -48,7 +48,7 @@ export function AppTopNav() {
     <nav className="border-b border-border/70 bg-card/50 px-4 py-2 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center gap-4 overflow-x-auto">
         <div className="flex shrink-0 items-center gap-3">
-          <div className="h-8 w-8 rounded-2xl bg-gradient-to-br from-primary to-[#424769] shadow-[0_8px_28px_rgba(249,177,122,0.35)]" />
+          <div className="h-8 w-8 rounded-2xl bg-gradient-to-br from-primary to-muted shadow-[0_8px_28px_rgba(139,0,0,0.3)]" />
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-foreground/70">
               WebinarPro

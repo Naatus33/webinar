@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import type { WebinarConfig } from "@/lib/webinar-templates";
+import { maybeAdvanceScarcityAuto } from "@/lib/webinar-scarcity-auto";
 import type { NextRequest } from "next/server";
 
 const PAGE_LIMIT = 100;
@@ -144,11 +146,29 @@ export async function GET(
           heartLiked: Boolean(viewerKey && likedSet.has(m.id)),
         }));
 
+        let configPayload = webinar?.config;
+        if (webinar?.config != null && typeof webinar.config === "object" && !Array.isArray(webinar.config)) {
+          try {
+            const cfg = webinar.config as unknown as WebinarConfig;
+            const advanced = maybeAdvanceScarcityAuto(cfg);
+            if (advanced) {
+              const safe = JSON.parse(JSON.stringify(advanced)) as object;
+              await prisma.webinar.update({
+                where: { id },
+                data: { config: safe },
+              });
+              configPayload = safe as typeof webinar.config;
+            }
+          } catch (err) {
+            console.error("[stream] scarcity/config update:", err);
+          }
+        }
+
         sendSseEvent("snapshot", {
           messages,
           polls,
           status: webinar?.status,
-          config: webinar?.config,
+          config: configPayload,
           spots: {
             count: webinar?.spotsCount,
             total: webinar?.spotsTotal,

@@ -11,10 +11,10 @@ const PHASE_LABELS: Record<string, string> = {
   red: "Vermelho",
 };
 const PHASE_COLORS: Record<string, string> = {
-  green: "#16A34A",
-  yellow: "#CA8A04",
-  orange: "#EA580C",
-  red: "#DC2626",
+  green: "#15803d",
+  yellow: "#a16207",
+  orange: "#9a3412",
+  red: "#8b0000",
 };
 
 export function OfferPanel() {

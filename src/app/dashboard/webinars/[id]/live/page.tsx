@@ -46,6 +46,8 @@ export default async function LiveOpsPage({ params }: LiveOpsPageProps) {
     redirect("/dashboard");
   }
 
+  const initialMacros = (Array.isArray(webinar.macros) ? webinar.macros : []) as unknown[];
+
   return (
     <LiveOpsClient
       webinarId={webinar.id}
@@ -58,7 +60,7 @@ export default async function LiveOpsPage({ params }: LiveOpsPageProps) {
       startTime={webinar.startTime ?? null}
       replayEnabled={webinar.replayEnabled}
       config={webinar.config as WebinarConfig}
-      initialMacros={webinar.macros as any[]}
+      initialMacros={initialMacros}
     />
   );
 }

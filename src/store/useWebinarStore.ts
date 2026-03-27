@@ -4,7 +4,7 @@ import { getDefaultConfig, type WebinarConfig } from "@/lib/webinar-templates";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-interface WebinarMeta {
+export interface WebinarMeta {
   id: string;
   name: string;
   slug: string;
@@ -29,20 +29,70 @@ interface WebinarMeta {
   regSponsors: { name: string; logoUrl: string }[];
 }
 
+/** Campos persistidos no PATCH além de config/macros (página de login + agenda). */
+export type WebinarMetaPersistPatch = Pick<
+  WebinarMeta,
+  | "regBgImage"
+  | "regLogoUrl"
+  | "regDescription"
+  | "regTitle"
+  | "regCtaText"
+  | "regSponsors"
+  | "startDate"
+  | "startTime"
+>;
+
+function metaPersistSnapshot(meta: WebinarMeta): WebinarMetaPersistPatch {
+  return {
+    regBgImage: meta.regBgImage,
+    regLogoUrl: meta.regLogoUrl,
+    regDescription: meta.regDescription,
+    regTitle: meta.regTitle,
+    regCtaText: meta.regCtaText,
+    regSponsors: meta.regSponsors,
+    startDate: meta.startDate,
+    startTime: meta.startTime,
+  };
+}
+
+function emptyStrToNull(s: string | null | undefined): string | null {
+  if (s === undefined || s === null || s === "") return null;
+  return s;
+}
+
+function metaPersistToApiBody(m: WebinarMetaPersistPatch): Record<string, unknown> {
+  return {
+    regBgImage: emptyStrToNull(m.regBgImage),
+    regLogoUrl: emptyStrToNull(m.regLogoUrl),
+    regDescription: emptyStrToNull(m.regDescription),
+    regTitle: emptyStrToNull(m.regTitle),
+    regCtaText: emptyStrToNull(m.regCtaText),
+    regSponsors: m.regSponsors,
+    startDate: m.startDate === "" || m.startDate === undefined ? null : m.startDate,
+    startTime: m.startTime === "" || m.startTime === undefined ? null : m.startTime,
+  };
+}
+
 interface WebinarStoreState {
   webinarId: string | null;
   meta: WebinarMeta | null;
   config: WebinarConfig;
-  macros: any[];
+  macros: unknown[];
   saveStatus: SaveStatus;
   lastSavedSnapshot: string | null;
 
-  loadFromServer: (webinarId: string, meta: WebinarMeta, config: WebinarConfig, macros?: any[]) => void;
+  loadFromServer: (
+    webinarId: string,
+    meta: WebinarMeta,
+    config: WebinarConfig,
+    macros?: unknown[],
+  ) => void;
   updateConfig: <K extends keyof WebinarConfig>(
     section: K,
     updates: Partial<WebinarConfig[K]>
   ) => void;
-  updateWebinar: (patch: Partial<{ config: WebinarConfig; macros: any[] }>) => void;
+  updateMeta: (updates: Partial<WebinarMetaPersistPatch>) => void;
+  updateWebinar: (patch: Partial<{ config: WebinarConfig; macros: unknown[] }>) => void;
   setConfigField: (path: string[], value: unknown) => void;
   resetFromTemplate: (config: WebinarConfig) => void;
   setSaveStatus: (status: SaveStatus) => void;
@@ -58,7 +108,11 @@ export const useWebinarStore = create<WebinarStoreState>()(
     lastSavedSnapshot: null,
 
     loadFromServer(webinarId, meta, config, macros = []) {
-      const snap = JSON.stringify({ config, macros });
+      const snap = JSON.stringify({
+        config,
+        macros,
+        metaPersist: metaPersistSnapshot(meta),
+      });
       set({ webinarId, meta, config, macros, lastSavedSnapshot: snap, saveStatus: "idle" });
     },
 
@@ -69,6 +123,15 @@ export const useWebinarStore = create<WebinarStoreState>()(
           [section]: { ...state.config[section], ...updates },
         },
       }));
+    },
+
+    updateMeta(updates) {
+      set((state) => {
+        if (!state.meta) return state;
+        return {
+          meta: { ...state.meta, ...updates },
+        };
+      });
     },
 
     updateWebinar(patch) {
@@ -105,13 +168,17 @@ export const useWebinarStore = create<WebinarStoreState>()(
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 useWebinarStore.subscribe(
-  (state) => ({ config: state.config, macros: state.macros }),
-  async ({ config, macros }) => {
+  (state) => ({
+    config: state.config,
+    macros: state.macros,
+    metaPersist: state.meta ? metaPersistSnapshot(state.meta) : null,
+  }),
+  async ({ config, macros, metaPersist }) => {
     const { webinarId, lastSavedSnapshot, setSaveStatus } = useWebinarStore.getState();
 
     if (!webinarId) return;
 
-    const snapshot = JSON.stringify({ config, macros });
+    const snapshot = JSON.stringify({ config, macros, metaPersist });
     if (snapshot === lastSavedSnapshot) return;
 
     if (debounceTimer) clearTimeout(debounceTimer);
@@ -119,10 +186,13 @@ useWebinarStore.subscribe(
     debounceTimer = setTimeout(async () => {
       setSaveStatus("saving");
       try {
+        const body: Record<string, unknown> = { config, macros };
+        if (metaPersist) Object.assign(body, metaPersistToApiBody(metaPersist));
+
         const res = await fetch(`/api/webinars/${webinarId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ config, macros }),
+          body: JSON.stringify(body),
         });
 
         if (res.ok) {

@@ -31,6 +31,8 @@ export type PublicCopyOverrides = {
   headline: string | null;
   subtitle: string | null;
   description: string | null;
+  /** Subtítulo do bloco de inscrição (query: wp_form_subtitle). */
+  formSubtitle: string | null;
 };
 
 export function parsePublicCopyOverridesFromSearchParams(
@@ -40,6 +42,7 @@ export function parsePublicCopyOverridesFromSearchParams(
     headline: sanitizeOverride(params.get("wp_headline")),
     subtitle: sanitizeOverride(params.get("wp_subtitle")),
     description: sanitizeOverride(params.get("wp_desc")),
+    formSubtitle: sanitizeOverride(params.get("wp_form_subtitle")),
   };
 }
 
@@ -60,5 +63,6 @@ export function parsePublicCopyOverridesFromPageSearchParams(
     headline: pickSearchParam(sp, "wp_headline"),
     subtitle: pickSearchParam(sp, "wp_subtitle"),
     description: pickSearchParam(sp, "wp_desc"),
+    formSubtitle: pickSearchParam(sp, "wp_form_subtitle"),
   };
 }

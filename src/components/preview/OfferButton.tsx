@@ -5,10 +5,10 @@ import { useWebinarStore } from "@/store/useWebinarStore";
 
 const PHASES = ["green", "yellow", "orange", "red"] as const;
 const PHASE_COLORS: Record<string, string> = {
-  green: "#16A34A",
-  yellow: "#CA8A04",
-  orange: "#EA580C",
-  red: "#DC2626",
+  green: "#15803d",
+  yellow: "#a16207",
+  orange: "#9a3412",
+  red: "#8b0000",
 };
 
 interface OfferButtonProps {
@@ -36,7 +36,7 @@ export function OfferButton({ simulatePhase }: OfferButtonProps) {
     }
 
     if (!offer.colorTimer.enabled) {
-      return { color: offer.url ? "#7C3AED" : "#7C3AED", text: "Quero participar!", remaining: 0 };
+      return { color: offer.url ? "#8b0000" : "#8b0000", text: "Quero participar!", remaining: 0 };
     }
 
     let cumulative = 0;

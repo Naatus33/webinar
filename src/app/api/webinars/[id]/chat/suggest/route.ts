@@ -8,7 +8,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: webinarId } = await params;
+  await params;
   try {
     const { context, recentMessages } = await req.json();
 

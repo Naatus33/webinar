@@ -49,94 +49,110 @@
 
 :root {
   --motion-duration-fast: 150ms;
-  --motion-duration-normal: 220ms;
+  --motion-duration-normal: 240ms;
   --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Tema claro — neutro + accent pêssego */
-  --background: #f4f5fb;
-  --foreground: #2d3250;
+  /* Elevação premium (claro) */
+  --shadow-float: 0 1px 2px rgba(15, 15, 18, 0.04), 0 4px 12px rgba(15, 15, 18, 0.06);
+  --shadow-elevated:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset, 0 1px 2px rgba(15, 15, 18, 0.05),
+    0 12px 40px -8px rgba(15, 15, 18, 0.1);
+  --shadow-glow-primary: 0 8px 32px -6px rgba(139, 0, 0, 0.22);
+
+  /* Coal / Crimson / Gravel / Snow — claro premium */
+  --primary-rgb: 139, 0, 0;
+  --background: #f6f6f7;
+  --foreground: #0c0c0e;
   --card: #ffffff;
-  --card-foreground: #2d3250;
+  --card-foreground: #0c0c0e;
   --popover: #ffffff;
-  --popover-foreground: #2d3250;
-  --primary: #f9b17a;
-  --primary-foreground: #2d3250;
-  --secondary: #e8eaf4;
-  --secondary-foreground: #2d3250;
-  --muted: #e4e6f0;
-  --muted-foreground: #676f9d;
-  --accent: color-mix(in srgb, #f9b17a 18%, #ffffff);
-  --accent-foreground: #2d3250;
+  --popover-foreground: #0c0c0e;
+  --primary: #8b0000;
+  --primary-foreground: #ffffff;
+  --secondary: #ececee;
+  --secondary-foreground: #18181b;
+  --muted: #ebebed;
+  --muted-foreground: #71717a;
+  --accent: color-mix(in srgb, #71717a 8%, #ffffff);
+  --accent-foreground: #18181b;
   --destructive: oklch(0.58 0.22 25);
-  --border: color-mix(in srgb, #676f9d 28%, transparent);
-  --input: color-mix(in srgb, #676f9d 32%, transparent);
-  --ring: #f9b17a;
-  --chart-1: #f9b17a;
-  --chart-2: #676f9d;
-  --chart-3: #424769;
-  --chart-4: #8b92b8;
-  --chart-5: #c4a574;
-  --radius: 0.875rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #2d3250;
-  --sidebar-primary: #f9b17a;
-  --sidebar-primary-foreground: #2d3250;
-  --sidebar-accent: #f0f1f8;
-  --sidebar-accent-foreground: #2d3250;
-  --sidebar-border: color-mix(in srgb, #676f9d 22%, transparent);
-  --sidebar-ring: #f9b17a;
+  --border: color-mix(in srgb, #71717a 14%, transparent);
+  --input: color-mix(in srgb, #71717a 18%, transparent);
+  --ring: #8b0000;
+  --chart-1: #8b0000;
+  --chart-2: #71717a;
+  --chart-3: #a1a1aa;
+  --chart-4: #52525b;
+  --chart-5: #b91c1c;
+  --radius: 1rem;
+  --sidebar: #f3f3f5;
+  --sidebar-foreground: #0c0c0e;
+  --sidebar-primary: #8b0000;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8e8ec;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: color-mix(in srgb, #71717a 12%, transparent);
+  --sidebar-ring: #8b0000;
 
   /* Compat: dashboard wm-* e código legado */
-  --color-vermelho: #f9b17a;
-  --color-preto: #2d3250;
-  --color-preto-elevado: #424769;
-  --color-cinza-claro: #424769;
+  --color-vermelho: #8b0000;
+  --color-preto: #2a2a2a;
+  --color-preto-elevado: #3d3d3d;
+  --color-cinza-claro: #4a4a4a;
   --color-branco: #ffffff;
-  --color-verde: #27ae60;
-  --color-texto-secundario: #676f9d;
-  --color-borda: #676f9d;
+  --color-verde: #15803d;
+  --color-texto-secundario: #808080;
+  --color-borda: #a3a3a3;
 }
 
 .dark {
-  --background: #2d3250;
-  --foreground: #ffffff;
-  --card: #424769;
-  --card-foreground: #ffffff;
-  --popover: #424769;
-  --popover-foreground: #ffffff;
-  --primary: #f9b17a;
-  --primary-foreground: #2d3250;
-  --secondary: color-mix(in srgb, #424769 85%, #2d3250);
-  --secondary-foreground: #ffffff;
-  --muted: color-mix(in srgb, #424769 75%, #2d3250);
-  --muted-foreground: #676f9d;
-  --accent: color-mix(in srgb, #f9b17a 14%, #424769);
-  --accent-foreground: #ffffff;
-  --destructive: oklch(0.68 0.19 25);
-  --border: color-mix(in srgb, #676f9d 38%, transparent);
-  --input: color-mix(in srgb, #676f9d 42%, transparent);
-  --ring: #f9b17a;
-  --chart-1: #f9b17a;
-  --chart-2: #8b92b8;
-  --chart-3: #676f9d;
-  --chart-4: #c4a574;
-  --chart-5: #a8b0d4;
-  --sidebar: #2d3250;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #f9b17a;
-  --sidebar-primary-foreground: #2d3250;
-  --sidebar-accent: #424769;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: color-mix(in srgb, #676f9d 45%, transparent);
-  --sidebar-ring: #f9b17a;
+  --primary-rgb: 139, 0, 0;
+  --shadow-float: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-elevated:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 20px 48px -12px rgba(0, 0, 0, 0.55);
+  --shadow-glow-primary: 0 12px 40px -8px rgba(139, 0, 0, 0.35);
 
-  --color-vermelho: #f9b17a;
-  --color-preto: #2d3250;
-  --color-preto-elevado: #424769;
-  --color-cinza-claro: #424769;
-  --color-branco: #ffffff;
-  --color-texto-secundario: #676f9d;
-  --color-borda: #676f9d;
+  /* Dark premium: zinc profundo + relevo suave */
+  --background: #18181b;
+  --foreground: #fafafa;
+  --card: #27272a;
+  --card-foreground: #fafafa;
+  --popover: #2e2e33;
+  --popover-foreground: #fafafa;
+  --primary: #8b0000;
+  --primary-foreground: #ffffff;
+  --secondary: #3f3f46;
+  --secondary-foreground: #f4f4f5;
+  --muted: #3f3f46;
+  --muted-foreground: #a1a1aa;
+  --accent: color-mix(in srgb, #a1a1aa 22%, #27272a);
+  --accent-foreground: #fafafa;
+  --destructive: oklch(0.68 0.19 25);
+  --border: color-mix(in srgb, #fafafa 10%, transparent);
+  --input: color-mix(in srgb, #fafafa 14%, transparent);
+  --ring: #8b0000;
+  --chart-1: #8b0000;
+  --chart-2: #a1a1aa;
+  --chart-3: #71717a;
+  --chart-4: #dc2626;
+  --chart-5: #52525b;
+  --sidebar: #1f1f23;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #8b0000;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #3f3f46;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: color-mix(in srgb, #fafafa 8%, transparent);
+  --sidebar-ring: #8b0000;
+
+  --color-vermelho: #8b0000;
+  --color-preto: #18181b;
+  --color-preto-elevado: #27272a;
+  --color-cinza-claro: #3f3f46;
+  --color-branco: #fafafa;
+  --color-texto-secundario: #b3b3b3;
+  --color-borda: #909090;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -152,39 +168,68 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   html {
     @apply font-sans;
+    letter-spacing: -0.011em;
   }
 }
 
 @layer utilities {
+  .shadow-premium-sm {
+    box-shadow: var(--shadow-float);
+  }
+
+  .shadow-premium {
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .shadow-glow-primary {
+    box-shadow: var(--shadow-glow-primary);
+  }
+
   .bg-app-gradient {
+    background-color: var(--background);
     background-image:
       radial-gradient(
-        ellipse 120% 80% at 50% -20%,
-        color-mix(in srgb, #f9b17a 12%, #2d3250),
-        #2d3250
+        ellipse 130% 90% at 50% -35%,
+        color-mix(in srgb, var(--primary) 11%, transparent),
+        transparent 58%
+      ),
+      radial-gradient(
+        ellipse 70% 55% at 100% 0%,
+        color-mix(in srgb, var(--foreground) 4%, transparent),
+        transparent 45%
       );
   }
 
   .bg-card-glass {
-    @apply border border-white/10 shadow-[0_18px_45px_rgba(15,23,42,0.55)] backdrop-blur-xl;
-    background: color-mix(in srgb, #424769 72%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+    background: color-mix(in srgb, var(--card) 90%, transparent);
+    box-shadow: var(--shadow-elevated);
+    @apply backdrop-blur-xl;
+  }
+
+  .dark .bg-card-glass {
+    border-color: color-mix(in srgb, var(--border) 80%, transparent);
   }
 
   .ring-primary-soft {
     box-shadow:
-      0 0 0 1px color-mix(in oklch, var(--ring) 40%, transparent),
-      0 0 0 8px color-mix(in oklch, var(--ring) 12%, transparent);
+      0 0 0 1px color-mix(in oklch, var(--ring) 35%, transparent),
+      0 0 0 10px color-mix(in oklch, var(--ring) 9%, transparent);
   }
 
   .text-gradient-primary {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(
-      to right,
-      #f9b17a,
-      color-mix(in srgb, #ffffff 55%, #f9b17a)
+      118deg,
+      color-mix(in srgb, var(--primary) 88%, #000000) 0%,
+      var(--primary) 38%,
+      color-mix(in srgb, var(--primary) 72%, #ffffff) 100%
     );
   }
 

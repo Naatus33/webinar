@@ -56,6 +56,12 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
   const [regTitle, setRegTitle] = useState("");
   const [regCtaText, setRegCtaText] = useState("Ir para o webinar!");
   const [regSponsors, setRegSponsors] = useState<Sponsor[]>([]);
+  const defCap = getDefaultConfig().capturePage!;
+  const [captureOverlayOpacity, setCaptureOverlayOpacity] = useState(defCap.overlayOpacity);
+  const [captureOverlayTint, setCaptureOverlayTint] = useState(defCap.overlayTintColor ?? "#000000");
+  const [captureFormSubtitle, setCaptureFormSubtitle] = useState(
+    defCap.formSubtitle ?? "Preencha os dados para acessar a transmissão.",
+  );
 
   // Temas
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
@@ -111,6 +117,15 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
       case "regSponsors":
         setRegSponsors(value as Sponsor[]);
         break;
+      case "captureOverlayOpacity":
+        setCaptureOverlayOpacity(Math.min(1, Math.max(0.1, Number(value) || 0.5)));
+        break;
+      case "captureOverlayTint":
+        setCaptureOverlayTint(value as string);
+        break;
+      case "captureFormSubtitle":
+        setCaptureFormSubtitle(value as string);
+        break;
     }
   }
 
@@ -156,6 +171,9 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
       capturePage: {
         ...(tpl.config.capturePage ?? getDefaultConfig().capturePage),
         backgroundPosition: regBgPosition,
+        overlayOpacity: captureOverlayOpacity,
+        overlayTintColor: captureOverlayTint,
+        formSubtitle: captureFormSubtitle,
       },
     };
 
@@ -317,24 +335,84 @@ export function NewWebinarForm({ onCancel }: NewWebinarFormProps) {
             />
           )}
           {activeTab === "registration" && (
-            <RegistrationPageTab
-              bgImage={regBgImage}
-              bgPosition={regBgPosition}
-              logoUrl={regLogoUrl}
-              description={regDescription}
-              title={regTitle}
-              ctaText={regCtaText}
-              sponsors={regSponsors}
-              primaryColor={
-                getTemplateById(templateId)?.config?.branding?.primaryColor ?? "#7C3AED"
-              }
-              eventStartDate={startDate}
-              eventStartTime={startTime}
-              countdown={
-                (getTemplateById(templateId)?.config ?? getDefaultConfig()).countdown
-              }
-              onChange={handleRegChange}
-            />
+            <>
+              <RegistrationPageTab
+                bgImage={regBgImage}
+                bgPosition={regBgPosition}
+                logoUrl={regLogoUrl}
+                description={regDescription}
+                title={regTitle}
+                ctaText={regCtaText}
+                sponsors={regSponsors}
+                primaryColor={
+                  getTemplateById(templateId)?.config?.branding?.primaryColor ?? "#8B0000"
+                }
+                overlayOpacity={captureOverlayOpacity}
+                overlayTintColor={captureOverlayTint}
+                formSubtitle={captureFormSubtitle}
+                eventStartDate={startDate}
+                eventStartTime={startTime}
+                countdown={
+                  (getTemplateById(templateId)?.config ?? getDefaultConfig()).countdown
+                }
+                onChange={handleRegChange}
+              />
+              <div className="mx-6 space-y-4 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-200">Véu sobre a imagem de fundo</h3>
+                  <p className="text-xs text-slate-500">
+                    Opacidade e cor do degradê sobre a foto (salvo em config ao criar o webinar).
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-slate-400">Opacidade (10–100%)</label>
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={1}
+                      step={0.05}
+                      value={captureOverlayOpacity}
+                      onChange={(e) => handleRegChange("captureOverlayOpacity", e.target.value)}
+                      className="w-full accent-primary"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      {(captureOverlayOpacity * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-slate-400">Cor do degradê</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={
+                          /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(captureOverlayTint.trim())
+                            ? captureOverlayTint.trim()
+                            : "#000000"
+                        }
+                        onChange={(e) => handleRegChange("captureOverlayTint", e.target.value)}
+                        className="h-10 w-14 cursor-pointer rounded border border-slate-600 bg-slate-900"
+                      />
+                      <input
+                        type="text"
+                        value={captureOverlayTint}
+                        onChange={(e) => handleRegChange("captureOverlayTint", e.target.value)}
+                        className="h-10 min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 font-mono text-sm text-slate-50 outline-none ring-primary focus:ring-2"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-slate-400">Texto abaixo do título do formulário</label>
+                  <textarea
+                    value={captureFormSubtitle}
+                    onChange={(e) => handleRegChange("captureFormSubtitle", e.target.value)}
+                    rows={2}
+                    className="w-full resize-y rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none ring-primary focus:ring-2"
+                  />
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>

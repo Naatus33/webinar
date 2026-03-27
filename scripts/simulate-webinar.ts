@@ -77,15 +77,18 @@ async function simulateWebinar() {
   console.log(`\n[3/3] Simulando comando do gestor (Ativar Oferta + Escassez)...`);
   const startGestor = Date.now();
   
+  const baseConfig = (webinar.config ?? {}) as Record<string, unknown>;
+  const offerCfg = (baseConfig["offer"] ?? {}) as Record<string, unknown>;
+
   const updatedWebinar = await prisma.webinar.update({
     where: { id },
     data: {
       showSpots: true,
       spotsCount: { decrement: 1 },
       config: {
-        ...(webinar.config as any),
+        ...baseConfig,
         offer: {
-          ...(webinar.config as any).offer,
+          ...offerCfg,
           active: true
         }
       }

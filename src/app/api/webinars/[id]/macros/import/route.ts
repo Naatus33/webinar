@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+type MacroAction = "none" | "offer_on" | "scarcity_on";
+type MacroTiming = {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  totalSeconds: number;
+};
+type Macro = {
+  id: string;
+  label: string;
+  text: string;
+  fakeName?: string;
+  action: MacroAction;
+  pin: boolean;
+  timing?: MacroTiming;
+  createdAt?: string;
+};
+
 /**
  * POST /api/webinars/[id]/macros/import
  * Importa macros em massa via CSV
  * 
  * Formato CSV esperado:
- * hora,minuto,segundo,nome,mensagem
- * 0,0,30,Saudação,"Olá pessoal! Bem-vindos ao webinar"
- * 0,2,15,Pitch,"Confira nossa oferta especial"
+ * hora,minuto,segundo,nome_fake,mensagem
+ * 0,0,30,Maria Silva,"Que conteúdo incrível!"
+ * 0,2,15,João Santos,"Como garanto minha vaga?"
  */
 export async function POST(
   req: NextRequest,
@@ -16,9 +34,13 @@ export async function POST(
 ) {
   const { id: webinarId } = await params;
   try {
-    const { csvContent } = await req.json();
+    const body = (await req.json()) as unknown;
+    const csvContent =
+      typeof body === "object" && body !== null && "csvContent" in body
+        ? (body as { csvContent?: unknown }).csvContent
+        : undefined;
 
-    if (!csvContent || csvContent.trim().length === 0) {
+    if (typeof csvContent !== "string" || csvContent.trim().length === 0) {
       return NextResponse.json(
         { error: "CSV vazio" },
         { status: 400 }
@@ -27,7 +49,7 @@ export async function POST(
 
     // Parsear CSV
     const lines = csvContent.trim().split("\n");
-    const macros: any[] = [];
+    const macros: Macro[] = [];
 
     // Pular header
     for (let i = 1; i < lines.length; i++) {
@@ -54,9 +76,10 @@ export async function POST(
       const totalSeconds = h * 3600 + m * 60 + s;
 
       macros.push({
-        id: `macro_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        label: nome as string,
+        id: `macro_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+        label: (mensagem as string).slice(0, 25) || `Macro ${i}`,
         text: mensagem as string,
+        fakeName: nome as string,
         action: "none",
         pin: false,
         timing: {
@@ -65,7 +88,7 @@ export async function POST(
           seconds: s,
           totalSeconds,
         },
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       });
     }
 
@@ -79,6 +102,7 @@ export async function POST(
     // Atualizar webinar com novas macros
     const webinar = await prisma.webinar.findUnique({
       where: { id: webinarId },
+      select: { id: true, macros: true },
     });
 
     if (!webinar) {
@@ -88,16 +112,13 @@ export async function POST(
       );
     }
 
-    const existingMacros = ((webinar as any).macros as any[]) || [];
-    const updatedMacros: any[] = [...existingMacros, ...macros];
+    const existingMacros = (Array.isArray(webinar.macros) ? webinar.macros : []) as Macro[];
+    const updatedMacros: Macro[] = [...existingMacros, ...macros];
 
     await prisma.webinar.update({
       where: { id: webinarId },
       data: {
-        config: {
-          ...(webinar as any).config,
-          macros: updatedMacros,
-        },
+        macros: updatedMacros,
       },
     });
 
@@ -112,7 +133,5 @@ export async function POST(
       { error: "Erro ao importar macros" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
