@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -14,6 +14,8 @@ import {
   ArrowUpRight,
   Radio,
   Settings,
+  Copy,
+  CheckCircle2,
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -108,8 +110,26 @@ export function DashboardExecutive({
   teamSellerMetrics,
 }: DashboardExecutiveProps) {
   const [newWebinarOpen, setNewWebinarOpen] = useState(false);
+  const [publicOrigin, setPublicOrigin] = useState("");
+  const [copiedRoomId, setCopiedRoomId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPublicOrigin(typeof window !== "undefined" ? window.location.origin : "");
+  }, []);
 
   const chartData = CHART_DATA_LAST_7_DAYS;
+
+  function roomLoginUrl(code: string, slug: string) {
+    const path = `/live/${encodeURIComponent(code)}/${encodeURIComponent(slug)}`;
+    return publicOrigin ? `${publicOrigin}${path}` : path;
+  }
+
+  async function copyRoomLogin(id: string, code: string, slug: string) {
+    const url = roomLoginUrl(code, slug);
+    await navigator.clipboard.writeText(url);
+    setCopiedRoomId(id);
+    setTimeout(() => setCopiedRoomId(null), 2000);
+  }
 
   return (
     <div className="min-h-screen space-y-10 bg-background p-8 font-sans text-foreground">
@@ -302,14 +322,18 @@ export function DashboardExecutive({
                 <th className="p-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   Data/Hora
                 </th>
+                <th className="p-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground min-w-[200px]">
+                  Link da sala
+                </th>
                 <th className="p-6 text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   Ações
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              {webinars.slice(0, 5).map((w) => {
+              {webinars.map((w) => {
                 const status = STATUS_LABELS[w.status] || STATUS_LABELS.DRAFT;
+                const loginHref = roomLoginUrl(w.code, w.slug);
                 return (
                   <tr key={w.id} className="group transition-colors hover:bg-muted/25">
                     <td className="p-6">
@@ -340,6 +364,42 @@ export function DashboardExecutive({
                       <div className="text-[10px] font-bold uppercase text-muted-foreground">
                         <p>{w.startDate ? new Date(w.startDate).toLocaleDateString("pt-BR") : "--/--/----"}</p>
                         <p className="text-muted-foreground/80">{w.startTime || "--:--"}</p>
+                      </div>
+                    </td>
+                    <td className="p-6 align-top">
+                      <div className="flex max-w-[220px] flex-col gap-2 sm:max-w-[260px]">
+                        <p
+                          className="break-all font-mono text-[9px] leading-snug text-muted-foreground"
+                          title={loginHref}
+                        >
+                          {loginHref}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void copyRoomLogin(w.id, w.code, w.slug)}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[9px] font-black uppercase tracking-wide transition-all ${
+                              copiedRoomId === w.id
+                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                                : "border-border bg-muted/40 text-foreground hover:border-primary/30"
+                            }`}
+                          >
+                            {copiedRoomId === w.id ? (
+                              <CheckCircle2 className="h-3 w-3" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                            {copiedRoomId === w.id ? "Copiado" : "Copiar"}
+                          </button>
+                          <a
+                            href={loginHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[9px] font-black uppercase tracking-wide text-primary hover:underline"
+                          >
+                            Abrir
+                          </a>
+                        </div>
                       </div>
                     </td>
                     <td className="p-6 text-right">

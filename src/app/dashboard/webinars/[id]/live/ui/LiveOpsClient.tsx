@@ -8,7 +8,7 @@ import {
   MessageCircle, BarChart2, PlayCircle, SkipForward, Trash2, Pin,
   AlertTriangle, Zap, Tag, Gift, Sparkles, Heart,
   Bell, Settings, Users, Activity, Clock, Wifi, WifiOff, CheckCircle2,
-  Copy, Search, Link as LinkIcon, Flag, Reply, Send, ChevronDown, ChevronUp, ArrowLeft, ArrowRight,
+  Copy, Search, Link as LinkIcon, Flag, Reply, Send, Mail, ChevronDown, ChevronUp, ArrowLeft, ArrowRight,
   Monitor, Shield, RefreshCcw, MessagesSquare, Upload,
 } from "lucide-react";
 
@@ -116,7 +116,7 @@ export function LiveOpsClient({
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ next: WebinarStatus } | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>("conversao");
-  const [conversaoSubTab, setConversaoSubTab] = useState<ConversaoSubTab>("urgencia_sala");
+  const [conversaoSubTab, setConversaoSubTab] = useState<ConversaoSubTab>("cta");
   const liveOpsTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const onLiveOpsTabKeyDown = useCallback((e: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -246,6 +246,8 @@ export function LiveOpsClient({
   const [shareResults, setShareResults] = useState<{ id: string; name: string; email: string }[]>([]);
   const [selectedShareLead, setSelectedShareLead] = useState<{ name: string; email: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedRoomLink, setCopiedRoomLink] = useState(false);
+  const [publicOrigin, setPublicOrigin] = useState("");
 
   const [offerUrlDraft, setOfferUrlDraft] = useState(initialConfig.offer.url ?? "");
   const [offerUrlSaving, setOfferUrlSaving] = useState(false);
@@ -510,6 +512,10 @@ export function LiveOpsClient({
 
   // Atalhos Ctrl+1..9 gerenciados pelo FakeChatPanel
 
+  useEffect(() => {
+    setPublicOrigin(typeof window !== "undefined" ? window.location.origin : "");
+  }, []);
+
   // Busca de leads para compartilhar
   useEffect(() => {
     if (shareSearch.length < 2) { setShareResults([]); return; }
@@ -520,8 +526,13 @@ export function LiveOpsClient({
     return () => clearTimeout(t);
   }, [shareSearch, webinarId]);
 
+  const roomLoginUrl = useMemo(() => {
+    const path = `/live/${encodeURIComponent(webinarCode)}/${encodeURIComponent(webinarSlug)}`;
+    return publicOrigin ? `${publicOrigin}${path}` : path;
+  }, [publicOrigin, webinarCode, webinarSlug]);
+
   const shareLink = selectedShareLead
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/live/${webinarCode}/${webinarSlug}?name=${encodeURIComponent(selectedShareLead.name)}&email=${encodeURIComponent(selectedShareLead.email)}`
+    ? `${publicOrigin || (typeof window !== "undefined" ? window.location.origin : "")}/live/${webinarCode}/${webinarSlug}?name=${encodeURIComponent(selectedShareLead.name)}&email=${encodeURIComponent(selectedShareLead.email)}`
     : "";
 
   async function copyLink() {
@@ -529,6 +540,12 @@ export function LiveOpsClient({
     await navigator.clipboard.writeText(shareLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function copyRoomLoginLink() {
+    await navigator.clipboard.writeText(roomLoginUrl);
+    setCopiedRoomLink(true);
+    setTimeout(() => setCopiedRoomLink(false), 2000);
   }
 
   const hotLeads = useMemo(() => onlineLeads.filter((l) => l.online), [onlineLeads]);
@@ -1018,22 +1035,6 @@ export function LiveOpsClient({
                 <button
                   type="button"
                   role="tab"
-                  id="liveops-conversao-sub-urgencia"
-                  aria-selected={conversaoSubTab === "urgencia_sala"}
-                  aria-controls="liveops-conversao-subpanel"
-                  tabIndex={conversaoSubTab === "urgencia_sala" ? 0 : -1}
-                  onClick={() => setConversaoSubTab("urgencia_sala")}
-                  className={`flex-1 rounded-lg py-2 text-[9px] font-black uppercase tracking-widest transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
-                    conversaoSubTab === "urgencia_sala"
-                      ? "bg-background text-foreground shadow-sm border border-border/60"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Urgência
-                </button>
-                <button
-                  type="button"
-                  role="tab"
                   id="liveops-conversao-sub-link"
                   aria-selected={conversaoSubTab === "cta"}
                   aria-controls="liveops-conversao-subpanel"
@@ -1047,6 +1048,22 @@ export function LiveOpsClient({
                   }`}
                 >
                   Oferta
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="liveops-conversao-sub-urgencia"
+                  aria-selected={conversaoSubTab === "urgencia_sala"}
+                  aria-controls="liveops-conversao-subpanel"
+                  tabIndex={conversaoSubTab === "urgencia_sala" ? 0 : -1}
+                  onClick={() => setConversaoSubTab("urgencia_sala")}
+                  className={`flex-1 rounded-lg py-2 text-[9px] font-black uppercase tracking-widest transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                    conversaoSubTab === "urgencia_sala"
+                      ? "bg-background text-foreground shadow-sm border border-border/60"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Urgência
                 </button>
               </div>
 
@@ -1434,8 +1451,43 @@ export function LiveOpsClient({
             {/* ── COMPARTILHAR ── */}
             {activeTab === "compartilhar" && (
               <div className="space-y-4">
+                <div className="rounded-2xl border border-border/60 bg-muted/20 p-3 space-y-2">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Plano rápido</p>
+                  <ol className="text-[10px] text-muted-foreground leading-relaxed space-y-1.5 list-decimal list-inside marker:text-foreground/70">
+                    <li>Procura o lead pelo nome ou email.</li>
+                    <li>Copia o link de entrada — é o login do cliente na sala, com nome e email já preenchidos no link.</li>
+                  </ol>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-background p-3 space-y-2">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Link da sala (login público)</p>
+                  <p className="text-[10px] text-muted-foreground break-all font-mono leading-relaxed">{roomLoginUrl}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void copyRoomLoginLink()}
+                      className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-black transition-all ${
+                        copiedRoomLink
+                          ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                          : "bg-primary hover:brightness-110 text-foreground"
+                      }`}
+                    >
+                      {copiedRoomLink ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedRoomLink ? "Copiado!" : "Copiar link da sala"}
+                    </button>
+                    <a
+                      href={roomLoginUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[120px] flex items-center justify-center py-2 rounded-xl text-xs font-black border border-border bg-muted/40 hover:bg-muted/60 text-foreground transition-all"
+                    >
+                      Abrir sala
+                    </a>
+                  </div>
+                </div>
+
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">Link Personalizado</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">Link de entrada do cliente</p>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <input type="text" value={shareSearch} onChange={e => { setShareSearch(e.target.value); setSelectedShareLead(null); }}
@@ -1466,7 +1518,7 @@ export function LiveOpsClient({
                       </div>
                     </div>
                     <div className="p-3 rounded-xl bg-background border border-border space-y-2">
-                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Link gerado</p>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Link de login (copiar e enviar)</p>
                       <p className="text-[10px] text-muted-foreground break-all font-mono leading-relaxed">{shareLink}</p>
                       <button onClick={copyLink}
                         className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all ${copied ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400" : "bg-primary hover:brightness-110 text-foreground"}`}>
@@ -1476,6 +1528,16 @@ export function LiveOpsClient({
                     </div>
                   </div>
                 )}
+
+                <div className="rounded-2xl border border-dashed border-border/80 bg-muted/10 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">HubSpot — em breve</p>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    Integração com formulários criados no HubSpot: quando o lead se inscreve no formulário, disparo automático de e-mail com o link de login na sala e uma mensagem personalizada — sem copiar manualmente daqui.
+                  </p>
+                </div>
               </div>
             )}
           </div>
