@@ -4,12 +4,12 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import type { ElementType, KeyboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import {
   MessageCircle, BarChart2, PlayCircle, SkipForward, Trash2, Pin,
   AlertTriangle, Zap, Tag, Gift, Sparkles, Heart,
-  Bell, Settings, Users, Activity, Clock, Wifi, WifiOff, CheckCircle2,
+  Bell, Settings, Activity, Clock, Wifi, WifiOff, CheckCircle2,
   Copy, Search, Link as LinkIcon, Flag, Reply, Send, Mail, ChevronDown, ChevronUp, ArrowLeft, ArrowRight,
-  Monitor, Shield, RefreshCcw, MessagesSquare, Upload,
 } from "lucide-react";
 
 import {
@@ -869,7 +869,7 @@ export function LiveOpsClient({
                       </div>
                     )}
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      {isAdmin && adminAvatarUrl && <img src={adminAvatarUrl} alt="" className="h-3 w-3 rounded-full object-cover shrink-0" />}
+                      {isAdmin && adminAvatarUrl && <Image src={adminAvatarUrl} alt="" className="h-3 w-3 rounded-full object-cover shrink-0" width={12} height={12} />}
                       <span className={`text-[9px] font-black uppercase tracking-widest truncate ${isAdmin ? "text-red-400" : "text-muted-foreground"}`}>{m.author}</span>
                       {m.type === "urgent" && <span className="text-[7px] font-black bg-red-500/20 text-red-400 px-1 rounded">URG</span>}
                       {m.type === "warning" && <span className="text-[7px] font-black bg-amber-500/20 text-amber-400 px-1 rounded">AVS</span>}
@@ -1387,7 +1387,7 @@ export function LiveOpsClient({
                     {adminAvatarUploading ? (
                       <RefreshCcw className="h-4 w-4 text-muted-foreground animate-spin" />
                     ) : config.adminAvatar?.logoUrl ? (
-                      <img src={config.adminAvatar.logoUrl} alt="" className="w-full h-full object-cover" />
+                      <Image src={config.adminAvatar.logoUrl} alt="" className="w-full h-full object-cover" width={0} height={0} sizes="100vw" />
                     ) : (
                       <Shield className="h-5 w-5 text-muted-foreground" />
                     )}

@@ -1,6 +1,7 @@
 "use client";
 
 import type { WheelEvent } from "react";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SponsorsList, type Sponsor } from "./SponsorsList";
 import type { WebinarConfig } from "@/lib/webinar-templates";
@@ -243,11 +244,14 @@ export function RegistrationPagePreview({
                 onWheel={handleLogoWheelZoom}
               >
                 {logoUrl ? (
-                  <img
+                  <Image
                     src={logoUrl}
                     alt="Logo"
                     className="w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                     style={{ height: logoHeight }}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
                   />
                 ) : (
                   <div
@@ -257,12 +261,15 @@ export function RegistrationPagePreview({
                 )}
               </button>
             ) : logoUrl ? (
-              <img
+              <Image
                 src={logoUrl}
                 alt="Logo"
                 className="w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                 style={{ height: logoHeight }}
                 onWheel={handleLogoWheelZoom}
+                width={0}
+                height={0}
+                sizes="100vw"
               />
             ) : (
               <div
@@ -361,11 +368,14 @@ export function RegistrationPagePreview({
                           style={{ width: sponsorTileSize, height: sponsorTileSize }}
                           onWheel={handleSponsorWheelZoom}
                         >
-                          <img
+                          <Image
                             src={s.logoUrl}
                             alt={s.name || "Logo patrocinador"}
                             className="object-contain brightness-0 invert"
                             style={{ width: sponsorLogoSize, height: sponsorLogoSize }}
+                            width={0}
+                            height={0}
+                            sizes="100vw"
                           />
                         </div>
                       ) : (
@@ -402,11 +412,14 @@ export function RegistrationPagePreview({
                       style={{ width: sponsorTileSize, height: sponsorTileSize }}
                       onWheel={handleSponsorWheelZoom}
                     >
-                      <img
+                      <Image
                         src={s.logoUrl}
                         alt={s.name || "Logo patrocinador"}
                         className="object-contain brightness-0 invert"
                         style={{ width: sponsorLogoSize, height: sponsorLogoSize }}
+                        width={0}
+                        height={0}
+                        sizes="100vw"
                       />
                     </div>
                   ) : (

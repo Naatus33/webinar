@@ -35,7 +35,7 @@ export function LoginForm() {
       }
 
       router.push(callbackUrl);
-    } catch (err) {
+    } catch {
       setError("Ocorreu um erro ao tentar entrar. Tente novamente.");
       setLoading(false);
     }

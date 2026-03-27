@@ -2,8 +2,7 @@
 
 import { useWebinarStore } from "@/store/useWebinarStore";
 import { 
-  Monitor, Heart, Bell, Layout, 
-  Zap, MessageCircle, Users, Sparkles 
+  Heart, Bell, MessageCircle, Sparkles
 } from "lucide-react";
 
 export function RoomSettingsTab() {

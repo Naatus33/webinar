@@ -4,7 +4,7 @@ import { checkRateLimit, rateLimitKey } from "@/lib/rate-limit";
 
 type Context = { params: Promise<{ id: string; pollId: string }> };
 
-export async function POST(request: Request, { params }: Context) {
+export async function POST(_request: Request, { params }: Context) {
   const { id, pollId } = await params;
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     ?? request.headers.get("x-real-ip")

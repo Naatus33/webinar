@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Check, Copy, ExternalLink } from "lucide-react";
 
 import { RegistrationPageTab } from "@/components/new-webinar/RegistrationPageTab";
@@ -54,11 +54,7 @@ function CopyUrlRow({ label, url }: { label: string; url: string }) {
 
 export function RegistrationCapturePanel() {
   const { meta, config, updateMeta, updateConfig, webinarId } = useWebinarStore();
-  const [origin, setOrigin] = useState("");
-
-  useEffect(() => {
-    setOrigin(typeof window !== "undefined" ? window.location.origin : "");
-  }, []);
+  const [origin] = useState(typeof window !== "undefined" ? window.location.origin : "");
 
   if (!meta) {
     return (

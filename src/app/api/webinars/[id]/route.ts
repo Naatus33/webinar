@@ -19,7 +19,7 @@ async function getCurrentUser() {
   });
 }
 
-export async function GET(_req: Request, { params }: RouteContext) {
+export async function GET(_request: Request, { params }: RouteContext) {
   const { id } = await params;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
@@ -87,7 +87,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   return NextResponse.json(safe);
 }
 
-export async function DELETE(_req: Request, { params }: RouteContext) {
+export async function DELETE({ params }: RouteContext) {
   const { id } = await params;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

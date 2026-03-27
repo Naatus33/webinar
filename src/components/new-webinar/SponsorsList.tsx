@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, WheelEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Plus, Trash2, Upload } from "lucide-react";
 
 export interface Sponsor {
@@ -123,11 +124,14 @@ export function SponsorsList({ sponsors, onChange }: SponsorsListProps) {
                 aria-label="Zoom da logo do patrocinador (use scroll do mouse)"
               >
                 {sponsor.logoUrl ? (
-                  <img
+                  <Image
                     src={sponsor.logoUrl}
                     alt="Logo patrocinador"
                     className="w-auto object-contain"
                     style={{ height: logoSize, maxWidth: tileSize }}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
                   />
                 ) : (
                   <div

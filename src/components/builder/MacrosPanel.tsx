@@ -25,7 +25,7 @@ export function MacrosPanel() {
   const { macros: storeMacros, updateWebinar } = useWebinarStore();
   const macros = (storeMacros as Macro[]) || [];
 
-  const [editing, setEditing] = useState<Macro | null>(null);
+
   const [csvInput, setCsvInput] = useState("");
   const [showCsvImport, setShowCsvImport] = useState(false);
   const [importingCsv, setImportingCsv] = useState(false);
