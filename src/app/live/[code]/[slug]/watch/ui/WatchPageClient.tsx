@@ -1,20 +1,33 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+  type CSSProperties,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   MessageCircle, X, Users, AlertTriangle, ChevronUp, Pin, 
-  Maximize2, Minimize2, Heart, Timer, Zap, Send, Share2,
+  Maximize2, Minimize2, Heart, Zap, Send, Share2,
   Trophy, Rocket, Flame, ThumbsUp, Bell, Monitor, Laptop,
-  Volume2, VolumeX, Settings, Layout, ShoppingCart
+  Volume2, VolumeX, Settings, Layout, ShoppingCart, LogOut,
 } from "lucide-react";
-import type { WebinarConfig } from "@/lib/webinar-templates";
+import {
+  mergeScarcityConfig,
+  computeUrgencyDisplayCount,
+  resolveScarcityButton,
+  type WebinarConfig,
+} from "@/lib/webinar-templates";
 import { computePublicWatchPhase } from "@/lib/webinar-timing";
 import { useWebinarSse } from "@/lib/useWebinarSse";
 import { PollDisplay } from "@/components/polls/PollDisplay";
 
-const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
 interface WebinarData {
   id: string;
@@ -31,35 +44,79 @@ interface WebinarData {
   config: WebinarConfig;
 }
 
-const PHASE_COLORS: Record<string, string> = {
-  green: "#10B981",
-  yellow: "#EAB308",
-  orange: "#F97316",
-  red: "#EF4444",
-};
+function scarcityWatchCtaClass(color: "green" | "yellow" | "orange" | "red"): string {
+  switch (color) {
+    case "red":
+      return "bg-red-600 shadow-red-500/40 animate-pulse";
+    case "orange":
+      return "bg-orange-600 shadow-orange-500/35";
+    case "yellow":
+      return "bg-amber-500 shadow-amber-500/35";
+    default:
+      return "bg-emerald-600 shadow-emerald-500/35";
+  }
+}
+
+function scarcityBarTone(color: "green" | "yellow" | "orange" | "red") {
+  switch (color) {
+    case "red":
+      return {
+        border: "border-red-500/25",
+        from: "from-red-500/[0.14]",
+        to: "to-rose-500/[0.06]",
+        accent: "text-red-400",
+        number: "text-red-400",
+      };
+    case "orange":
+      return {
+        border: "border-orange-500/25",
+        from: "from-orange-500/[0.14]",
+        to: "to-amber-500/[0.06]",
+        accent: "text-orange-400",
+        number: "text-orange-400",
+      };
+    case "yellow":
+      return {
+        border: "border-amber-500/25",
+        from: "from-amber-500/[0.14]",
+        to: "to-orange-500/[0.06]",
+        accent: "text-amber-400",
+        number: "text-amber-400",
+      };
+    default:
+      return {
+        border: "border-emerald-500/25",
+        from: "from-emerald-500/[0.14]",
+        to: "to-teal-500/[0.06]",
+        accent: "text-emerald-400",
+        number: "text-emerald-400",
+      };
+  }
+}
 
 const REACTION_ICONS = [
-  { id: 'heart', Icon: Heart, color: 'text-red-500', key: '1' },
-  { id: 'flame', Icon: Flame, color: 'text-orange-500', key: '2' },
-  { id: 'rocket', Icon: Rocket, color: 'text-blue-500', key: '3' },
-  { id: 'trophy', Icon: Trophy, color: 'text-yellow-500', key: '4' },
-  { id: 'thumbsup', Icon: ThumbsUp, color: 'text-emerald-500', key: '5' },
+  { id: "heart", Icon: Heart, color: "text-primary", key: "1" },
+  { id: "flame", Icon: Flame, color: "text-primary/80", key: "2" },
+  { id: "rocket", Icon: Rocket, color: "text-muted-foreground", key: "3" },
+  { id: "trophy", Icon: Trophy, color: "text-foreground/80", key: "4" },
+  { id: "thumbsup", Icon: ThumbsUp, color: "text-primary/70", key: "5" },
 ];
 
-const AVATAR_PALETTE = [
-  "border-violet-500/35 bg-violet-500/20 text-violet-100",
-  "border-sky-500/35 bg-sky-500/20 text-sky-100",
-  "border-emerald-500/35 bg-emerald-500/20 text-emerald-100",
-  "border-amber-500/35 bg-amber-500/20 text-amber-100",
-  "border-rose-500/35 bg-rose-500/20 text-rose-100",
-  "border-cyan-500/35 bg-cyan-500/20 text-cyan-100",
-  "border-fuchsia-500/35 bg-fuchsia-500/20 text-fuchsia-100",
-  "border-lime-500/35 bg-lime-500/20 text-lime-100",
-  "border-indigo-500/35 bg-indigo-500/20 text-indigo-100",
-  "border-orange-500/35 bg-orange-500/20 text-orange-100",
-  "border-teal-500/35 bg-teal-500/20 text-teal-100",
-  "border-pink-500/35 bg-pink-500/20 text-pink-100",
-] as const;
+/** Cor estável por nome (hash → matiz) — cada participante com tom distinto. */
+function avatarChromeStyle(authorKey: string): CSSProperties {
+  const key = authorKey.trim() || "?";
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const hue = Math.abs(h) % 360;
+  return {
+    backgroundColor: `hsla(${hue}, 58%, 38%, 0.5)`,
+    borderColor: `hsla(${hue}, 52%, 52%, 0.55)`,
+    color: `hsl(${hue}, 78%, 90%)`,
+  };
+}
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -96,8 +153,42 @@ export function WatchPageClient({
 }: {
   webinar: WebinarData;
 }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [viewerKey, setViewerKey] = useState<string | null>(null);
+
+  const loginPath = `/live/${encodeURIComponent(initialWebinar.code)}/${encodeURIComponent(initialWebinar.slug)}`;
+  const loginHref = useMemo(() => {
+    const q = searchParams.toString();
+    return q ? `${loginPath}?${q}` : loginPath;
+  }, [loginPath, searchParams]);
+
+  function handleExitWatch() {
+    try {
+      sessionStorage.removeItem("lead_id");
+      sessionStorage.removeItem("lead_name");
+      sessionStorage.removeItem("lead_email");
+      sessionStorage.removeItem("watch_heart_key");
+      sessionStorage.removeItem(`capture_access_${initialWebinar.id}`);
+    } catch {
+      /* ignore */
+    }
+    router.push(loginHref);
+  }
+  /** Definida no 1º render no cliente (sessionStorage), sem setState — evita fechar/reabrir o EventSource (NS_BINDING_ABORTED). */
+  const viewerKeyRef = useRef<string | null>(null);
+  if (typeof window !== "undefined" && viewerKeyRef.current === null) {
+    try {
+      let k = sessionStorage.getItem("watch_heart_key");
+      if (!k) {
+        k = crypto.randomUUID();
+        sessionStorage.setItem("watch_heart_key", k);
+      }
+      viewerKeyRef.current = k;
+    } catch {
+      viewerKeyRef.current = crypto.randomUUID();
+    }
+  }
+  const viewerKey = viewerKeyRef.current;
   const { messages, polls, status: sseStatus, config: sseConfig, spots, connected } = useWebinarSse(
     initialWebinar.id,
     true,
@@ -107,14 +198,29 @@ export function WatchPageClient({
   
   const config = sseConfig || initialWebinar.config;
   const currentStatus = sseStatus || initialWebinar.status;
+  const scarcity = resolveScarcityButton(config);
+  const mergedScarcity = useMemo(() => mergeScarcityConfig(config.scarcity), [config.scarcity]);
+
+  const [urgencyTick, setUrgencyTick] = useState(0);
+  useEffect(() => {
+    if (!mergedScarcity.enabled) return;
+    const u = mergedScarcity.urgency;
+    if (!u.decreaseEnabled || !u.startedAt) return;
+    const id = window.setInterval(() => setUrgencyTick((t) => t + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [mergedScarcity.enabled, mergedScarcity.urgency.decreaseEnabled, mergedScarcity.urgency.startedAt]);
+
+  const urgencyDisplayCount = useMemo(
+    () => computeUrgencyDisplayCount(mergeScarcityConfig(config.scarcity)),
+    [config.scarcity, urgencyTick],
+  );
 
   const [phase, setPhase] = useState<"waiting" | "live" | "replay">("live");
-  const [countdown, setCountdown] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
   
   const [chatOpen, setChatOpen] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
   const [playerSeconds, setPlayerSeconds] = useState(0);
-  const playerWatchRef = useRef<any>(null);
+  const playerWatchRef = useRef<{ seekTo: (amount: number, type?: "seconds") => void } | null>(null);
   const watchVideoDurationRef = useRef(0);
   const playerSecondsRef = useRef(0);
   useEffect(() => { playerSecondsRef.current = playerSeconds; }, [playerSeconds]);
@@ -145,19 +251,7 @@ export function WatchPageClient({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
-  /** Uma cor aleatória da paleta por autor, estável durante a sessão nesta aba. */
-  const avatarColorByAuthorRef = useRef<Record<string, string>>({});
   const [userIsScrolling, setUserIsScrolling] = useState(false);
-
-  function pickAvatarClass(authorKey: string): string {
-    const key = authorKey.trim() || "?";
-    const map = avatarColorByAuthorRef.current;
-    if (!map[key]) {
-      const idx = Math.floor(Math.random() * AVATAR_PALETTE.length);
-      map[key] = AVATAR_PALETTE[idx]!;
-    }
-    return map[key];
-  }
 
   /** Estado inicial igual no SSR e no cliente — evita mismatch de hidratação (quebrava o input do chat). */
   const [participantName, setParticipantName] = useState<string | null>(null);
@@ -165,6 +259,10 @@ export function WatchPageClient({
   const [showNameModal, setShowNameModal] = useState(true);
   const [modalNameDraft, setModalNameDraft] = useState("");
   const heartPendingRef = useRef<Set<string>>(new Set());
+  /** Reflete curtida/contagem na hora do clique; SSE remove quando bater com o servidor. */
+  const [heartOptimistic, setHeartOptimistic] = useState<
+    Record<string, { likeCount: number; liked: boolean }>
+  >({});
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionStart, setMentionStart] = useState(0);
   const [mentionHighlight, setMentionHighlight] = useState(0);
@@ -180,22 +278,14 @@ export function WatchPageClient({
   const activePoll = polls.find(p => !p.closed);
 
   const tickPhase = useCallback(() => {
-    const { phase: p, secondsUntilStart, secondsSinceStart } = computePublicWatchPhase({
+    const { phase: p, secondsSinceStart } = computePublicWatchPhase({
       startDate: initialWebinar.startDate,
       startTime: initialWebinar.startTime,
       replayEnabled: initialWebinar.replayEnabled,
       status: currentStatus,
     });
     setPhase(p);
-    if (secondsUntilStart != null && secondsUntilStart > 0) {
-      const h = Math.floor(secondsUntilStart / 3600);
-      const m = Math.floor((secondsUntilStart % 3600) / 60);
-      const s = secondsUntilStart % 60;
-      setCountdown({ hours: h, minutes: m, seconds: s });
-    } else {
-      setCountdown(null);
-    }
-    
+
     if (p === "live" || p === "replay") {
       setPlayerSeconds((prev) => {
         if (secondsSinceStart <= 0) return prev;
@@ -212,51 +302,32 @@ export function WatchPageClient({
     return () => clearInterval(timer);
   }, [tickPhase]);
 
-  // Nome/email: URL tem prioridade; senão sessionStorage (após hidratar, antes do paint quando possível)
-  useLayoutEffect(() => {
-    try {
-      const urlName = searchParams.get("name")?.trim();
-      const urlEmail = searchParams.get("email")?.trim();
-      if (urlName) {
-        sessionStorage.setItem("lead_name", urlName);
-        setParticipantName(urlName);
-        setShowNameModal(false);
-        if (urlEmail) {
-          sessionStorage.setItem("lead_email", urlEmail);
-          setParticipantEmail(urlEmail);
-        }
-        return;
-      }
-      const storedName = sessionStorage.getItem("lead_name")?.trim();
-      if (storedName) {
-        setParticipantName(storedName);
-        setShowNameModal(false);
-      }
-      if (urlEmail) {
-        sessionStorage.setItem("lead_email", urlEmail);
-        setParticipantEmail(urlEmail);
-      } else {
-        const em = sessionStorage.getItem("lead_email");
-        if (em) setParticipantEmail(em);
-      }
-    } catch {
-      /* private mode / storage bloqueado */
-    }
-  }, [searchParams]);
+  const waitingPath = `/live/${encodeURIComponent(initialWebinar.code)}/${encodeURIComponent(initialWebinar.slug)}/waiting`;
+  useEffect(() => {
+    if (phase !== "waiting") return;
+    if (!participantName) return;
+    const q = searchParams.toString();
+    router.replace(q ? `${waitingPath}?${q}` : waitingPath);
+  }, [phase, participantName, router, searchParams, waitingPath]);
 
-  /** Chave estável por aba para curtidas no servidor (uma por viewerKey). */
+  // Guard de acesso: a sala watch só abre para quem passou pela captura (nome + e-mail).
   useLayoutEffect(() => {
     try {
-      let k = sessionStorage.getItem("watch_heart_key");
-      if (!k) {
-        k = crypto.randomUUID();
-        sessionStorage.setItem("watch_heart_key", k);
+      const storedName = sessionStorage.getItem("lead_name")?.trim();
+      const storedEmail = sessionStorage.getItem("lead_email")?.trim();
+      if (storedName && storedEmail) {
+        setParticipantName(storedName);
+        setParticipantEmail(storedEmail);
+        setShowNameModal(false);
+      } else {
+        const search = typeof window !== "undefined" ? window.location.search : "";
+        router.replace(`/live/${initialWebinar.code}/${initialWebinar.slug}${search}`);
       }
-      setViewerKey(k);
     } catch {
-      setViewerKey(`k-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      const search = typeof window !== "undefined" ? window.location.search : "";
+      router.replace(`/live/${initialWebinar.code}/${initialWebinar.slug}${search}`);
     }
-  }, []);
+  }, [router, searchParams, initialWebinar.code, initialWebinar.slug]);
 
   // Heartbeat a cada 30s para rastrear presença
   useEffect(() => {
@@ -266,14 +337,14 @@ export function WatchPageClient({
       fetch(`/api/webinars/${initialWebinar.id}/heartbeat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: participantName, email }),
+        body: JSON.stringify({ name: participantName, email, viewerKey: viewerKey ?? undefined }),
         keepalive: true,
       }).catch(() => {});
     };
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 30_000);
     return () => clearInterval(interval);
-  }, [participantName, participantEmail, initialWebinar.id]);
+  }, [participantName, participantEmail, initialWebinar.id, viewerKey]);
 
   // Scroll automático do chat — rola apenas o container, não a página
   useEffect(() => {
@@ -326,38 +397,52 @@ export function WatchPageClient({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [config.reactions.enabled]);
 
-  const offerComputed = useMemo(() => {
-    const offer = config.offer;
-    if (!offer.colorTimer.enabled) {
-      return {
-        offerPhase: "green" as const,
-        remainingSeconds: null,
-        text: "Quero participar!",
-        color: config.branding.primaryColor,
-      };
-    }
+  const [scarcityTick, setScarcityTick] = useState(0);
+  useEffect(() => {
+    if (!scarcity.enabled || !scarcity.currentPhaseStartedAt) return;
+    if (!scarcity.showTimer && !scarcity.autoTimer) return;
+    const id = window.setInterval(() => setScarcityTick((t) => t + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [scarcity.enabled, scarcity.showTimer, scarcity.autoTimer, scarcity.currentPhaseStartedAt]);
 
-    const phases = ["green", "yellow", "orange", "red"] as const;
-    let cumulative = 0;
-    for (const p of phases) {
-      cumulative += offer.colorTimer.phases[p].seconds;
-      if (playerSeconds < cumulative) {
-        return {
-          offerPhase: p,
-          remainingSeconds: cumulative - playerSeconds,
-          text: offer.colorTimer.phases[p].text,
-          color: PHASE_COLORS[p],
-        };
-      }
-    }
+  /** Evita POST duplicado na mesma fase; SSE/HMR podem atrasar o snapshot. */
+  const scarcityAdvanceSentRef = useRef<string>("");
+  useEffect(() => {
+    if (!scarcity.enabled || !scarcity.autoTimer || !scarcity.currentPhaseStartedAt) return;
+    const started = Date.parse(scarcity.currentPhaseStartedAt);
+    if (!Number.isFinite(started)) return;
+    const total = scarcity.phaseSeconds[scarcity.color];
+    const elapsed = Math.floor((Date.now() - started) / 1000);
+    const remaining = Math.max(0, total - elapsed);
+    const phaseKey = `${scarcity.color}|${scarcity.currentPhaseStartedAt}`;
+    if (remaining > 0) return;
+    if (scarcityAdvanceSentRef.current === phaseKey) return;
+    scarcityAdvanceSentRef.current = phaseKey;
+    void fetch(`/api/webinars/${initialWebinar.id}/scarcity-advance`, { method: "POST" }).catch(() => {});
+  }, [
+    scarcity.enabled,
+    scarcity.autoTimer,
+    scarcity.color,
+    scarcity.currentPhaseStartedAt,
+    scarcity.phaseSeconds,
+    scarcityTick,
+    initialWebinar.id,
+  ]);
 
-    return {
-      offerPhase: "red" as const,
-      remainingSeconds: 0,
-      text: offer.colorTimer.phases.red.text,
-      color: PHASE_COLORS.red,
-    };
-  }, [config.branding.primaryColor, config.offer, playerSeconds]);
+  const offerUrlTrimmed = (config.offer.url ?? "").trim();
+
+  const scarcityCountdownStr = useMemo(() => {
+    if (!scarcity.showTimer || !scarcity.currentPhaseStartedAt) return null;
+    const started = Date.parse(scarcity.currentPhaseStartedAt);
+    if (!Number.isFinite(started)) return null;
+    const total = scarcity.phaseSeconds[scarcity.color];
+    const elapsed = Math.floor((Date.now() - started) / 1000);
+    const rem = Math.max(0, total - elapsed);
+    const m = Math.floor(rem / 60);
+    const s = rem % 60;
+    if (m > 0) return `${m}:${String(s).padStart(2, "0")}`;
+    return `${s}s`;
+  }, [scarcity.showTimer, scarcity.currentPhaseStartedAt, scarcity.color, scarcity.phaseSeconds, scarcityTick]);
 
   const addReaction = (type: string) => {
     if (!config.reactions.enabled) return;
@@ -379,10 +464,44 @@ export function WatchPageClient({
         body: JSON.stringify({ viewerKey }),
       });
       if (!res.ok) return;
+      const data: unknown = await res.json();
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "likeCount" in data &&
+        "liked" in data &&
+        typeof (data as { likeCount: unknown }).likeCount === "number" &&
+        typeof (data as { liked: unknown }).liked === "boolean"
+      ) {
+        const likeCount = (data as { likeCount: number }).likeCount;
+        const liked = (data as { liked: boolean }).liked;
+        setHeartOptimistic((prev) => ({ ...prev, [msgId]: { likeCount, liked } }));
+      }
     } finally {
       heartPendingRef.current.delete(msgId);
     }
   }
+
+  useEffect(() => {
+    setHeartOptimistic((prev) => {
+      const ids = Object.keys(prev);
+      if (ids.length === 0) return prev;
+      const next = { ...prev };
+      let changed = false;
+      for (const id of ids) {
+        const msg = messages.find((x) => x.id === id);
+        if (!msg) continue;
+        const o = next[id]!;
+        const serverCount = msg.likeCount ?? 0;
+        const serverLiked = msg.heartLiked ?? false;
+        if (serverCount === o.likeCount && serverLiked === o.liked) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [messages]);
 
   function confirmParticipantName() {
     const n = modalNameDraft.trim();
@@ -452,10 +571,10 @@ export function WatchPageClient({
   }
 
   // Efeito Ambilight Dinâmico
-  const ambilightColor = config.offer.active ? 'rgba(249, 115, 22, 0.15)' : 'rgba(124, 58, 237, 0.05)';
+  const ambilightColor = config.offer.active
+    ? "rgba(139, 0, 0, 0.07)"
+    : "rgba(0, 0, 0, 0.04)";
 
-  const showWaitingOverlay = phase === "waiting" && countdown !== null;
-  const pad2 = (n: number) => String(n).padStart(2, "0");
   const playerPlaying = phase !== "waiting";
   /** react-player v3+ usa `src`; `url` é ignorado e caía no player HTML5 sem fonte. */
   const watchSrc = initialWebinar.videoUrl?.trim() ?? "";
@@ -463,7 +582,9 @@ export function WatchPageClient({
   const chatLocked = !participantName || showNameModal;
 
   return (
-    <div className={`h-[100dvh] max-h-[100dvh] bg-slate-950 text-slate-200 flex flex-col overflow-hidden transition-all duration-1000 ${focusMode ? 'bg-black' : ''}`}>
+    <div
+      className={`min-h-[100svh] flex flex-col overflow-x-hidden bg-background text-foreground transition-all duration-1000 lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden ${focusMode ? "bg-black text-white" : ""}`}
+    >
       {showNameModal && (
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
@@ -471,11 +592,11 @@ export function WatchPageClient({
           aria-modal="true"
           aria-labelledby="watch-name-modal-title"
         >
-          <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
-            <h2 id="watch-name-modal-title" className="text-lg font-black text-white">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <h2 id="watch-name-modal-title" className="text-lg font-black text-foreground">
               Como quer aparecer no chat?
             </h2>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-2 text-sm text-muted-foreground">
               Use o mesmo nome da inscrição ou outro apelido. Isso vale só para esta sessão neste aparelho.
             </p>
             <input
@@ -490,7 +611,7 @@ export function WatchPageClient({
               }}
               maxLength={80}
               placeholder="Seu nome"
-              className="mt-4 h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 text-sm text-white outline-none ring-primary/30 focus:border-primary/50 focus:ring-2"
+              className="mt-4 h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none ring-primary/30 focus:border-primary/50 focus:ring-2"
               autoFocus
             />
             <button
@@ -537,7 +658,7 @@ export function WatchPageClient({
 
       {/* Header Premium (compacto para caber vídeo + chat na viewport) */}
       {!focusMode && (
-        <header className="h-14 shrink-0 border-b border-slate-800/40 bg-slate-900/60 backdrop-blur-2xl flex items-center justify-between px-4 md:px-6 z-50">
+        <header className="z-50 flex h-14 shrink-0 items-center justify-between border-b border-border/60 bg-card/80 px-4 backdrop-blur-2xl md:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-4">
             {config.branding.logo ? (
               <img src={config.branding.logo} alt="Logo" className="h-8 w-auto shrink-0 object-contain transition-transform hover:scale-105 md:h-9" />
@@ -547,32 +668,48 @@ export function WatchPageClient({
               </div>
             )}
             <div className="min-w-0 flex flex-col gap-0.5">
-              <h1 className="truncate font-black text-xs text-white tracking-tight md:text-sm">
+              <h1 className="truncate text-xs font-black tracking-tight text-foreground md:text-sm">
                 {config.content.title || initialWebinar.name}
               </h1>
               <div className="flex items-center gap-1.5">
-                <span className="flex h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-emerald-400 tabular-nums md:text-[11px]">
+                <span className="flex h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-bold tabular-nums text-emerald-500 md:text-[11px]">
                   {participants || 0} assistindo agora
                 </span>
               </div>
             </div>
           </div>
+          <div className="flex shrink-0 items-center">
+            <button
+              type="button"
+              onClick={handleExitWatch}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-2.5 text-[11px] font-semibold text-destructive transition-colors hover:bg-destructive/20 md:px-3 md:text-xs"
+            >
+              <LogOut className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" aria-hidden />
+              Sair
+            </button>
+          </div>
         </header>
       )}
 
       {/* Main: min-h-0 permite o flex encolher; bloco centralizado em telas largas */}
-      <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row lg:justify-center">
+      <main
+        className={`relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row lg:justify-center ${
+          mergedScarcity.enabled
+            ? "pb-[calc(env(safe-area-inset-bottom)+4.75rem)] md:pb-[calc(env(safe-area-inset-bottom)+3.75rem)]"
+            : ""
+        }`}
+      >
         <div className="flex min-h-0 w-full max-w-[1600px] flex-1 flex-col overflow-hidden lg:flex-row lg:mx-auto">
         
         {/* Video Area — limita 16:9 para caber na altura útil (header já descontado) */}
         <div
-          className={`relative flex min-h-0 flex-1 items-center justify-center bg-black transition-all duration-500 lg:min-w-0 ${
+          className={`relative flex min-h-0 flex-none items-center justify-center bg-black transition-all duration-500 lg:min-w-0 lg:flex-1 ${
             focusMode ? "lg:p-0" : "p-2 lg:p-3"
           }`}
         >
           <div
-            className={`relative mx-auto aspect-video w-full overflow-hidden shadow-2xl shadow-black/80 group player-container max-h-[min(50dvh,calc(100dvh-10rem))] max-w-[min(100%,calc(50dvh*16/9))] ${
+            className={`relative mx-auto aspect-video w-full overflow-hidden shadow-2xl shadow-black/80 group player-container max-h-[min(70svh,calc(100svh-12rem))] max-w-[min(100%,calc(70svh*16/9))] lg:max-h-[min(50dvh,calc(100dvh-10rem))] lg:max-w-[min(100%,calc(50dvh*16/9))] ${
               focusMode
                 ? "lg:max-h-[calc(100dvh-1rem)] lg:max-w-[min(100%,calc((100dvh-1rem)*16/9))]"
                 : "lg:max-h-[calc(100dvh-3.5rem)] lg:max-w-[min(100%,calc((100dvh-3.5rem)*16/9))]"
@@ -583,9 +720,9 @@ export function WatchPageClient({
             <div className="w-full h-full player-wrapper">
               {watchSrc ? (
                 <ReactPlayer
+                  // @ts-expect-error instância expõe seekTo; pacote tipa ref como HTMLVideoElement
                   ref={playerWatchRef}
                   key={watchSrc}
-                  url={watchSrc}
                   src={watchSrc}
                   width="100%"
                   height="100%"
@@ -613,44 +750,21 @@ export function WatchPageClient({
                   }}
                 />
               ) : (
-                <div className="flex h-full min-h-[200px] w-full flex-col items-center justify-center gap-3 bg-slate-950 px-6 text-center">
-                  <Monitor className="h-12 w-12 text-slate-600" aria-hidden />
-                  <p className="text-sm font-bold text-slate-400">
+                <div className="flex h-full min-h-[200px] w-full flex-col items-center justify-center gap-3 bg-muted/30 px-6 text-center">
+                  <Monitor className="h-12 w-12 text-muted-foreground" aria-hidden />
+                  <p className="text-sm font-bold text-muted-foreground">
                     Nenhuma URL de vídeo configurada para este webinar.
                   </p>
                 </div>
               )}
             </div>
 
-            {showWaitingOverlay && countdown != null && (
-              <div
-                className="absolute inset-0 z-[40] flex flex-col items-center justify-center gap-3 bg-black/85 px-4 text-center backdrop-blur-md sm:gap-4"
-                aria-live="polite"
-                aria-label="Contagem regressiva até o início do evento"
-              >
-                <Timer className="h-10 w-10 text-primary sm:h-12 sm:w-12" aria-hidden />
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/60 sm:text-sm">
-                  O evento começa em
-                </p>
-                <div className="flex items-baseline justify-center gap-1 font-mono text-5xl font-black tabular-nums tracking-tight text-white sm:gap-2 sm:text-7xl md:text-8xl">
-                  <span>{pad2(countdown.hours)}</span>
-                  <span className="pb-1 text-white/40">:</span>
-                  <span>{pad2(countdown.minutes)}</span>
-                  <span className="pb-1 text-white/40">:</span>
-                  <span>{pad2(countdown.seconds)}</span>
-                </div>
-                <p className="max-w-md text-sm text-white/55">
-                  {config.content.title || initialWebinar.name}
-                </p>
-              </div>
-            )}
-
             {/* Overlay de Reações */}
             {config.reactions.enabled && (
               <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
                 {floatingReactions.map(r => {
                   const Icon = REACTION_ICONS.find(i => i.id === r.type)?.Icon || Heart;
-                  const color = REACTION_ICONS.find(i => i.id === r.type)?.color || 'text-red-500';
+                  const color = REACTION_ICONS.find((i) => i.id === r.type)?.color || "text-primary";
                   return (
                     <div 
                       key={r.id}
@@ -678,56 +792,48 @@ export function WatchPageClient({
 
         {/* Sidebar (Chat & Oferta) — mais estreita para o vídeo caber na mesma viewport */}
         <aside
-          className={`flex min-h-0 w-full flex-1 flex-col border-l border-slate-800/40 bg-slate-900/30 backdrop-blur-3xl transition-all duration-500 lg:w-80 lg:flex-none lg:shrink-0 xl:w-[22rem] ${
+          className={`flex min-h-0 w-full flex-1 flex-col overflow-hidden border-t border-border/60 bg-card/40 backdrop-blur-3xl transition-all duration-500 lg:w-80 lg:flex-none lg:shrink-0 lg:border-t-0 lg:border-l xl:w-[22rem] ${
             focusMode ? "lg:translate-x-full lg:opacity-0" : ""
           }`}
         >
-          
-          {/* Botão Escassez (acima do chat, controlado pelo admin) */}
-          {(config as any).scarcityButton?.enabled && (
-            <div className="shrink-0 px-3 pb-0 pt-2">
-              <button
-                className={`w-full rounded-xl py-2.5 text-xs font-black uppercase tracking-widest shadow-lg transition-all md:text-sm ${
-                  (config as any).scarcityButton?.color === "red"
-                    ? "bg-red-500 text-white shadow-red-500/30 animate-pulse"
-                    : (config as any).scarcityButton?.color === "yellow"
-                    ? "bg-amber-500 text-white shadow-amber-500/30"
-                    : "bg-emerald-500 text-white shadow-emerald-500/30"
-                }`}
-              >
-                {(config as any).scarcityButton?.label || "Garanta sua vaga!"}
-              </button>
-            </div>
-          )}
-
-          {/* Botão de Oferta (Sempre Visível se Ativo) */}
-          {config.offer.active && (
-            <div className="border-b border-slate-800/40 bg-primary/5 p-3 animate-in slide-in-from-top duration-500">
-              <a 
-                href={config.offer.url} 
-                target="_blank" 
-                className="group relative flex w-full flex-col items-center gap-0.5 overflow-hidden rounded-xl bg-primary p-3 font-black text-white shadow-2xl shadow-primary/30 transition-all hover:brightness-110 active:scale-[0.98] md:rounded-2xl md:p-4 md:text-base"
+          {/* CTA: mesmo botão configurado em LiveOps «Link e cores» quando Oferta está ligada (texto + semáforo + offer.url) */}
+          {(scarcity.enabled || config.offer.active) && (
+            <div className="animate-in slide-in-from-top border-b border-border/60 bg-primary/5 p-3 duration-500">
+              <a
+                href={offerUrlTrimmed || "#"}
+                target={offerUrlTrimmed ? "_blank" : undefined}
+                rel={offerUrlTrimmed ? "noopener noreferrer" : undefined}
+                onClick={(e) => {
+                  if (!offerUrlTrimmed) e.preventDefault();
+                }}
+                className={`group relative flex w-full flex-col items-center gap-0.5 overflow-hidden rounded-xl p-3 font-black text-white shadow-2xl transition-all hover:brightness-110 active:scale-[0.98] md:rounded-2xl md:p-4 md:text-base ${scarcityWatchCtaClass(scarcity.color)}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer" />
                 <div className="flex items-center gap-2 md:gap-3">
                   <ShoppingCart className="h-5 w-5 shrink-0 md:h-6 md:w-6" />
-                  <span className="text-center text-sm md:text-base">{offerComputed.text}</span>
+                  <span className="text-center text-sm md:text-base">{scarcity.label}</span>
                 </div>
-                {spots.show && (
-                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] opacity-80 md:text-[10px] md:tracking-[0.2em]">Restam apenas {spots.count} vagas</span>
+                {scarcity.enabled && scarcity.showTimer && scarcityCountdownStr != null && (
+                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] opacity-90 md:text-[10px] font-mono tabular-nums">
+                    {scarcityCountdownStr}
+                  </span>
+                )}
+                {config.offer.active && spots.show && (
+                  <span className="text-[9px] font-bold uppercase tracking-[0.15em] opacity-80 md:text-[10px] md:tracking-[0.2em]">
+                    Restam apenas {spots.count} vagas
+                  </span>
                 )}
               </a>
-              
-              {/* Barra de Lote */}
-              {spots.show && (
+
+              {config.offer.active && spots.show && (
                 <div className="mt-2 space-y-1.5 md:mt-3 md:space-y-2">
-                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-500 md:text-[10px]">
+                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-muted-foreground md:text-[10px]">
                     <span>Progresso do Lote</span>
                     <span className="text-primary">{Math.round((1 - spots.count / spots.total) * 100)}% Vendido</span>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full border border-slate-800 bg-slate-950 md:h-2">
-                    <div 
-                      className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(124,58,237,0.6)]"
+                  <div className="h-1.5 w-full overflow-hidden rounded-full border border-border bg-muted md:h-2">
+                    <div
+                      className="h-full bg-primary shadow-[0_0_12px_rgba(var(--primary-rgb),0.45)] transition-all duration-1000 ease-out"
                       style={{ width: `${(1 - spots.count / spots.total) * 100}%` }}
                     />
                   </div>
@@ -738,13 +844,18 @@ export function WatchPageClient({
 
           {/* Chat Area */}
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex items-center justify-between border-b border-slate-800/40 bg-slate-900/40 px-3 py-2.5 md:px-4">
+            <div className="flex items-center justify-between border-b border-border/60 bg-muted/30 px-3 py-2 md:px-4">
               <div className="flex items-center gap-2">
                 <MessageCircle className="h-4 w-4 shrink-0 text-primary md:h-5 md:w-5" />
-                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 md:text-xs md:tracking-[0.2em]">Chat ao Vivo</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground md:text-xs md:tracking-[0.2em]">
+                  Chat ao Vivo
+                </span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setFocusMode(!focusMode)} className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-white">
+                <button
+                  onClick={() => setFocusMode(!focusMode)}
+                  className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
                   <Maximize2 className="h-4 w-4" />
                 </button>
               </div>
@@ -754,7 +865,7 @@ export function WatchPageClient({
               <div className="flex min-h-0 flex-1 flex-col">
                 <div
                   ref={chatContainerRef}
-                  className="scrollbar-hide min-h-0 flex-1 space-y-3 overflow-y-auto p-3 md:space-y-4 md:p-4"
+                  className="scrollbar-hide min-h-0 flex-1 space-y-2 overflow-y-auto p-2 md:space-y-2.5 md:p-3"
                   onScroll={(e) => {
                     const target = e.currentTarget;
                     const isAtBottom =
@@ -763,87 +874,95 @@ export function WatchPageClient({
                   }}
                 >
                   {messages.length === 0 ? (
-                    <p className="py-8 text-center text-sm font-medium text-slate-500">
+                    <p className="py-8 text-center text-sm font-medium text-muted-foreground">
                       Nenhuma mensagem ainda. Seja o primeiro a comentar.
                     </p>
                   ) : (
                     messages.map((m) => {
-                      const adminDisplayName = (config as any).adminAvatar?.displayName || "Administrador";
+                      const adminDisplayName = config.adminAvatar?.displayName || "Administrador";
                       const isAdmin = m.author === adminDisplayName || m.author === "Equipe" || m.author === "Administrador";
                       const isOwn = participantName != null && m.author === participantName;
-                      const adminLogoUrl = (config as any).adminAvatar?.logoUrl;
+                      const adminLogoUrl = config.adminAvatar?.logoUrl;
 
-                      const cardBase = "group relative rounded-2xl border px-3.5 py-3 animate-in fade-in slide-in-from-bottom-2 duration-300 transition-colors";
-                      let cardVariant = "border-slate-800/50 bg-slate-900/40";
-                      if ((m as any).type === "urgent") {
+                      const cardBase = "group relative rounded-xl border px-2.5 py-2 animate-in fade-in slide-in-from-bottom-2 duration-300 transition-colors";
+                      let cardVariant = "border-border/60 bg-card/50";
+                      if (m.type === "urgent") {
                         cardVariant = "border-red-500/30 bg-red-500/10";
-                      } else if ((m as any).type === "warning") {
+                      } else if (m.type === "warning") {
                         cardVariant = "border-amber-500/25 bg-amber-500/10";
                       } else if (m.pinned) {
                         cardVariant = "border-amber-500/25 bg-amber-500/[0.07] ring-1 ring-amber-500/10";
                       } else if (isAdmin) {
-                        cardVariant = "border-primary/15 bg-slate-900/35";
+                        cardVariant = "border-primary/20 bg-muted/40";
                       } else if (isOwn) {
                         cardVariant = "border-primary/20 bg-primary/5";
                       }
 
-                      const count = m.likeCount ?? 0;
-                      const iLiked = m.heartLiked ?? false;
+                      const heartO = heartOptimistic[m.id];
+                      const count = heartO?.likeCount ?? m.likeCount ?? 0;
+                      const iLiked = heartO?.liked ?? m.heartLiked ?? false;
                       return (
                         <div key={m.id} className={`${cardBase} ${cardVariant}`}>
                           {/* Reply context */}
-                          {(m as any).replyToContent && (
-                            <div className="mb-2 px-3 py-1.5 rounded-xl bg-slate-800/60 border-l-2 border-slate-600">
-                              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{(m as any).replyToAuthor}</p>
-                              <p className="text-[11px] text-slate-400 truncate">{(m as any).replyToContent}</p>
+                          {m.replyToContent && (
+                            <div className="mb-1.5 rounded-lg border-l-2 border-muted-foreground/40 bg-muted/50 px-2 py-1">
+                              <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">
+                                {m.replyToAuthor}
+                              </p>
+                              <p className="truncate text-[10px] text-muted-foreground">{m.replyToContent}</p>
                             </div>
                           )}
-                          <div className="flex gap-3">
+                          <div className="flex gap-2">
                             <div
-                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[10px] font-black overflow-hidden ${
-                                isAdmin
-                                  ? "border-red-500/30 bg-red-500/10"
-                                  : pickAvatarClass(m.author)
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[9px] font-black overflow-hidden ${
+                                isAdmin ? "border-red-500/30 bg-red-500/10 text-red-200" : ""
                               }`}
+                              style={!isAdmin ? avatarChromeStyle(m.author) : undefined}
                               aria-hidden
                             >
                               {isAdmin && adminLogoUrl
                                 ? <img src={adminLogoUrl} alt="" className="w-full h-full object-cover" />
-                                : isAdmin ? <Zap className="h-4 w-4 text-red-400" /> : getInitials(m.author)
+                                : isAdmin ? <Zap className="h-3.5 w-3.5 text-red-400" /> : getInitials(m.author)
                               }
                             </div>
-                            <div className={`min-w-0 flex-1 ${count > 0 ? "pr-[4.75rem]" : "pr-14"}`}>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`truncate text-[10px] font-black uppercase tracking-widest ${isAdmin ? "text-red-400" : "text-slate-400"}`}>
+                            <div className={`min-w-0 flex-1 ${count > 0 ? "pr-[3.75rem]" : "pr-11"}`}>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span
+                                  className={`truncate text-[9px] font-black uppercase tracking-widest ${isAdmin ? "text-red-500" : "text-muted-foreground"}`}
+                                >
                                   {m.author}
                                 </span>
-                                {(m as any).type === "urgent" && <span className="text-[8px] font-black bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full uppercase">Urgente</span>}
-                                {(m as any).type === "warning" && <span className="text-[8px] font-black bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full uppercase">Aviso</span>}
-                                {m.pinned && <Pin className="h-3 w-3 shrink-0 text-amber-400" aria-hidden />}
+                                {m.type === "urgent" && <span className="text-[7px] font-black bg-red-500/20 text-red-400 px-1 py-0.5 rounded-full uppercase">Urgente</span>}
+                                {m.type === "warning" && <span className="text-[7px] font-black bg-amber-500/20 text-amber-400 px-1 py-0.5 rounded-full uppercase">Aviso</span>}
+                                {m.pinned && <Pin className="h-2.5 w-2.5 shrink-0 text-amber-400" aria-hidden />}
                               </div>
-                              <p className="mt-1 text-sm font-medium leading-relaxed text-slate-200">
+                              <p className="mt-0.5 text-xs font-medium leading-snug text-foreground">
                                 {renderChatContentWithMentions(m.content)}
                               </p>
                             </div>
                           </div>
                           <div
-                            className={`absolute right-1.5 top-px flex items-center rounded-full border border-slate-800/50 bg-slate-950/70 py-0.5 pl-1 backdrop-blur-sm sm:right-2 ${
-                              count > 0 ? "gap-0.5 pr-1.5" : "pr-1"
+                            className={`absolute right-1 top-px flex items-center rounded-full border border-border/60 bg-background/80 py-0.5 pl-0.5 backdrop-blur-sm sm:right-1.5 ${
+                              count > 0 ? "gap-0 pr-1" : "pr-0.5"
                             }`}
                             title={count > 0 ? `${count} curtida${count === 1 ? "" : "s"}` : undefined}
                           >
                             <button
                               type="button"
                               onClick={() => void toggleMessageHeart(m.id)}
-                              className={`rounded-lg p-1.5 transition-all ${iLiked ? "text-rose-500 opacity-100" : "text-slate-500 opacity-70 hover:text-rose-400 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"}`}
+                              className={`rounded-md p-1 transition-all ${iLiked ? "text-red-500 opacity-100" : "text-red-500/90 opacity-90 hover:text-red-500 hover:opacity-100"}`}
                               aria-label={iLiked ? "Remover curtida" : "Curtir mensagem"}
                             >
-                              <Heart className={`h-6 w-6 ${iLiked ? "fill-current" : ""}`} />
+                              <Heart
+                                className={`h-4 w-4 shrink-0 text-red-500 stroke-red-500 ${iLiked ? "fill-red-500" : "fill-none"}`}
+                                fill={iLiked ? "currentColor" : "none"}
+                                strokeWidth={iLiked ? 2 : 2.25}
+                              />
                             </button>
                             {count > 0 && (
                               <span
-                                className={`min-w-[1.25rem] text-right text-xs font-bold tabular-nums leading-none ${
-                                  iLiked ? "text-rose-400" : "text-slate-400"
+                                className={`min-w-[1.1rem] text-right text-[10px] font-bold tabular-nums leading-none ${
+                                  iLiked ? "text-red-500" : "text-muted-foreground"
                                 }`}
                               >
                                 {count}
@@ -857,10 +976,10 @@ export function WatchPageClient({
                   <div ref={chatEndRef} />
                 </div>
 
-                <div className="relative z-20 shrink-0 border-t border-slate-800/40 bg-slate-900/50 p-3 pointer-events-auto md:p-4">
+                <div className="pointer-events-auto relative z-20 shrink-0 border-t border-border/60 bg-muted/25 p-2.5 md:p-4">
                   {mentionOpen && mentionFiltered.length > 0 && (
                     <ul
-                      className="absolute bottom-full left-3 right-[3.25rem] z-10 mb-1 max-h-36 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950 py-1 shadow-xl scrollbar-hide md:left-4 md:right-[4.25rem]"
+                      className="scrollbar-hide absolute bottom-full left-3 right-[3.25rem] z-10 mb-1 max-h-36 overflow-y-auto rounded-xl border border-border bg-card py-1 shadow-xl md:left-4 md:right-[4.25rem]"
                       role="listbox"
                     >
                       {mentionFiltered.map((name, idx) => (
@@ -871,14 +990,15 @@ export function WatchPageClient({
                             aria-selected={idx === mentionHighlight}
                             className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
                               idx === mentionHighlight
-                                ? "bg-primary/20 text-white"
-                                : "text-slate-300 hover:bg-slate-800/80"
+                                ? "bg-primary/15 text-foreground"
+                                : "text-foreground/90 hover:bg-muted"
                             }`}
                             onMouseEnter={() => setMentionHighlight(idx)}
                             onClick={() => insertMentionPick(name)}
                           >
                             <span
-                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[9px] font-black ${pickAvatarClass(name)}`}
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[9px] font-black"
+                              style={avatarChromeStyle(name)}
                             >
                               {getInitials(name)}
                             </span>
@@ -941,7 +1061,7 @@ export function WatchPageClient({
                           : "Escreva uma mensagem… (@ para mencionar)"
                       }
                       disabled={chatSending || chatLocked}
-                      className="min-h-10 flex-1 rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 outline-none ring-primary/40 focus:border-primary/50 focus:ring-2 disabled:opacity-50 md:min-h-11 md:rounded-xl md:px-4 md:py-2.5"
+                      className="min-h-10 flex-1 rounded-lg border border-input bg-background/90 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none ring-primary/40 focus:border-primary/50 focus:ring-2 disabled:opacity-50 md:min-h-11 md:rounded-xl md:px-4 md:py-2.5"
                       aria-label="Mensagem do chat"
                       autoComplete="off"
                     />
@@ -960,17 +1080,17 @@ export function WatchPageClient({
             ) : (
               <div className="flex-1 flex items-center justify-center p-10 text-center">
                 <div className="space-y-4">
-                  <div className="h-16 w-16 rounded-3xl bg-slate-900 flex items-center justify-center mx-auto border border-slate-800">
-                    <MessageCircle className="h-8 w-8 text-slate-700" />
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-border bg-muted/50">
+                    <MessageCircle className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Chat desativado</p>
+                  <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Chat desativado</p>
                 </div>
               </div>
             )}
 
             {/* Barra de Reações (Desktop) */}
             {config.reactions.enabled && (
-              <div className="flex justify-center gap-3 border-t border-slate-800/40 bg-slate-900/40 px-2 py-2 md:gap-5 md:px-3 md:py-3">
+              <div className="flex justify-center gap-3 border-t border-border/60 bg-muted/20 px-2 py-2 md:gap-5 md:px-3 md:py-3">
                 {REACTION_ICONS.map(({ id, Icon, color }) => (
                   <button 
                     key={id}
@@ -987,16 +1107,91 @@ export function WatchPageClient({
         </div>
       </main>
 
+      {/* Barra fixa inferior — apenas urgência (config.scarcity) */}
+      {mergedScarcity.enabled && (() => {
+        const tone = scarcityBarTone(scarcity.color);
+        const isCritical = scarcity.color === "red" || scarcity.color === "orange" || urgencyDisplayCount <= 3;
+        return (
+          <div
+            className={`fixed bottom-0 left-0 right-0 z-[70] animate-in slide-in-from-bottom border-t ${tone.border} bg-card/55 backdrop-blur-3xl shadow-[0_-18px_32px_rgba(0,0,0,0.32)] ring-1 ring-border/40 duration-500 ${
+              isCritical ? "animate-pulse" : ""
+            }`}
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.25rem)" }}
+            role="status"
+            aria-live="polite"
+          >
+            <div className={`bg-gradient-to-r ${tone.from} ${tone.to}`}>
+              <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-3 px-3 py-2 md:px-4 md:py-2">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span
+                        className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                          isCritical ? "bg-red-500 animate-ping" : "bg-amber-400 animate-ping"
+                        }`}
+                      />
+                      <span
+                        className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
+                          isCritical ? "bg-red-500" : "bg-amber-400"
+                        }`}
+                      />
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] ${
+                        isCritical
+                          ? "border-red-500/30 bg-red-500/15 text-red-300"
+                          : "border-amber-500/25 bg-amber-500/10 text-amber-300"
+                      }`}
+                    >
+                      <AlertTriangle className="h-3 w-3" aria-hidden />
+                      URGENTE
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-bold leading-tight text-foreground md:text-xs">
+                      {mergedScarcity.message}
+                    </p>
+                    <p
+                      className={`mt-0.5 text-sm font-black tabular-nums md:mt-0 md:text-base ${tone.number} ${
+                        scarcity.color === "red" ? "animate-pulse" : ""
+                      }`}
+                    >
+                      {urgencyDisplayCount}{" "}
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground md:text-[11px]">
+                        vagas disponíveis
+                      </span>
+                    </p>
+                    <p
+                      className={`hidden md:block text-[10px] font-extrabold uppercase tracking-[0.16em] ${
+                        isCritical ? "text-red-200/90" : "text-foreground/70"
+                      }`}
+                    >
+                      Você pode perder sua vaga a qualquer momento
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Prova Social (Toasts) */}
       {config.socialProof.enabled && socialProof && (
-        <div className="fixed bottom-10 left-10 z-[100] pointer-events-none">
-          <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 p-5 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-5 animate-in slide-in-from-left-10 duration-700 max-w-sm ring-1 ring-white/5">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
-              <Bell className="h-6 w-6 text-emerald-500" />
+        <div
+          className={`fixed left-4 right-4 z-[100] pointer-events-none md:left-10 md:right-auto ${
+            mergedScarcity.enabled ? "bottom-32" : "bottom-10"
+          }`}
+        >
+          <div className="flex w-full max-w-none animate-in items-center gap-5 rounded-3xl border border-border bg-card/95 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.35)] ring-1 ring-border/40 backdrop-blur-2xl duration-700 slide-in-from-bottom-2 md:max-w-sm md:slide-in-from-left-10">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
+              <Bell className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-black text-white tracking-tight">{socialProof.name}</p>
-              <p className="text-xs text-slate-400 font-medium">de {socialProof.city} acabou de garantir a vaga!</p>
+              <p className="text-sm font-black tracking-tight text-foreground">{socialProof.name}</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                de {socialProof.city} acabou de garantir a vaga!
+              </p>
             </div>
           </div>
         </div>

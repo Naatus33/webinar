@@ -23,6 +23,7 @@ export default async function CapturePage({ params, searchParams }: CapturePageP
       status: true,
       startDate: true,
       startTime: true,
+      replayEnabled: true,
       lgpdEnabled: true,
       lgpdText: true,
       passwordEnabled: true,

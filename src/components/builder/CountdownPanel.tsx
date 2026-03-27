@@ -38,11 +38,6 @@ export function CountdownPanel() {
                 onToggle={() => updateConfig("countdown", { showOnCapture: !countdown.showOnCapture })}
                 label="Mostrar na página de captura"
               />
-              <SwitchRow
-                enabled={countdown.showOnWatch}
-                onToggle={() => updateConfig("countdown", { showOnWatch: !countdown.showOnWatch })}
-                label="Mostrar na página do webinar"
-              />
             </div>
           </>
         )}
