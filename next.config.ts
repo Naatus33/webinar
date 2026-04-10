@@ -8,8 +8,30 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.join(projectRoot, "..");
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   turbopack: {
     root: workspaceRoot,
+  },
+  async headers() {
+    return [
+      {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "Access-Control-Allow-Origin",
+            value: process.env.ALLOWED_ORIGINS || "*",
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, Authorization",
+          },
+        ],
+      },
+    ];
   },
 };
 

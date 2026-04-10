@@ -6,10 +6,11 @@ import type { ElementType, KeyboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
-  MessageCircle, BarChart2, PlayCircle, SkipForward, Trash2, Pin,
+  MessageCircle, MessagesSquare, BarChart2, PlayCircle, SkipForward, Trash2, Pin,
   AlertTriangle, Zap, Tag, Gift, Sparkles, Heart,
   Bell, Settings, Activity, Clock, Wifi, WifiOff, CheckCircle2,
   Copy, Search, Link as LinkIcon, Flag, Reply, Send, Mail, ChevronDown, ChevronUp, ArrowLeft, ArrowRight,
+  Users, Monitor, Shield, Upload,
 } from "lucide-react";
 
 import {

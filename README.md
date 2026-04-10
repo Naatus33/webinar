@@ -14,27 +14,65 @@ Análise funcional completa (criação, funil público, permissões): [docs/ANAL
 
 - **Chat em tempo real:** o modo `config.chat.mode === "live"` usa SSE no endpoint [`/api/webinars/[id]/chat/stream`](src/app/api/webinars/[id]/chat/stream/route.ts) e atualiza o painel do host e a sala do espectador com snapshots periódicos (inclui mensagens, `pinned` e `timestamp`).
 - **Postgres:** `prisma/schema.prisma` usa `provider = "postgresql"`. No `.env`, defina `DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DB?schema=public`.
-  - Migrações: `npx prisma migrate dev` (dev) ou `npx prisma migrate deploy` (produção), depois `npx prisma generate`.
+  - Migrações: `yarn prisma migrate dev` (dev) ou `yarn prisma migrate deploy` (produção), depois `yarn prisma generate`.
   - **Prisma 7:** em [`src/lib/prisma.ts`](src/lib/prisma.ts), Postgres usa o adapter `@prisma/adapter-pg` + `pg`; se `DATABASE_URL` começar com `file:` (SQLite), usa `better-sqlite3`.
-  - **Usuários demo:** após migrar, rode `npm run db:seed` — `admin@demo.local`, `gestor@demo.local`, `vendedor@demo.local` (senha `demo1234`).
+  - **Usuários demo:** após migrar, rode `yarn db:seed` — `admin@demo.local`, `gestor@demo.local`, `vendedor@demo.local` (senha `demo1234`); admin global: `admin@admin.com` / `admin123`.
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-First, run the development server:
+### Configuração local (PostgreSQL + porta 3099)
+
+Este repositório usa **Yarn** (lockfile: `yarn.lock`). Instale dependências com `yarn`.
+
+1. Copie o arquivo de ambiente:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Instale pacotes:
+
+```bash
+yarn
+```
+
+3. Garanta que o PostgreSQL está rodando localmente e crie o banco `webinar`.
+4. Ajuste o `DATABASE_URL` no `.env` (se usuário/senha/host forem diferentes).
+5. Rode as migrações e seed:
+
+```bash
+yarn prisma migrate dev
+yarn db:seed
+```
+
+6. Inicie a aplicação:
+
+```bash
+yarn dev
+```
+
+A aplicação sobe em `http://localhost:3099` com host `0.0.0.0`.
+
+**Produção (build):**
+
+```bash
+yarn build
+yarn start
+```
+
+### Liberação da porta 3099 no Windows (PowerShell como Administrador)
+
+```powershell
+netsh advfirewall firewall add rule name="Webinar 3099" dir=in action=allow protocol=TCP localport=3099
+```
+
+Para remover depois:
+
+```powershell
+netsh advfirewall firewall delete rule name="Webinar 3099"
+```
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
